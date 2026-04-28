@@ -2966,8 +2966,8 @@ e.g. &quot;Lock in this summer, grow my arms and quads&quot;
 // Purchase unlocks: paid_core (BYOK) or paid_pass (hosted AI, no key needed).
 // ══════════════════════════════════════════════════════════════════════════════
 
-const TRIAL_DAYS        = 7;
-const TRIAL_AI_CAP      = 3;   // free AI uses during trial
+const TRIAL_DAYS        = 30;  // 1 month free trial
+const TRIAL_AI_CAP      = 3;   // max AI uses during trial
 const TRIAL_MS          = TRIAL_DAYS * 24 * 60 * 60 * 1000;
 
 // ── Device fingerprint (anti-abuse) ──────────────────────────────────────────
@@ -7379,13 +7379,32 @@ function renderConfirmCard(intent, warning){
 // ── STAGE 2: Generate full plan from parsed intent ────────────────────────────
 async function generatePlan(){
   if(!parsedIntent){return;}
-  // Check trial/purchase status before consuming AI
-  if(!isPaid() && !getApiKey()){
+  
+  // Check purchase type and trial status BEFORE consuming AI
+  const purchaseType = localStorage.getItem('apex_purchase_type');
+  const accessMode = localStorage.getItem('apex_access_mode');
+  const apiKey = getApiKey();
+  
+  // Only 'pass' and 'absolute' users get unlimited AI uses within their subscription period
+  // 'trial' and 'core' users capped at 3 AI uses total
+  const isUnlimitedAI = (purchaseType === 'pass' || purchaseType === 'absolute');
+  
+  if(!isUnlimitedAI && !apiKey){
+    // Trial or Core user without API key
     if(isTrialExpired()){ showTrialExpiredModal(); return; }
-    if(getTrialAiUses() >= TRIAL_AI_CAP){ showAiCapModal(); return; }
-    incrementTrialAiUses();
+    
+    // Check AI usage cap (max 3 during trial/core)
+    const aiUses = parseInt(localStorage.getItem('apex_ai_uses_trial') || '0');
+    if(aiUses >= TRIAL_AI_CAP){
+      showAiCapModal(); 
+      return; 
+    }
+    
+    // Increment usage counter
+    localStorage.setItem('apex_ai_uses_trial', (aiUses + 1).toString());
     renderAiUsesBadge();
   }
+  
   document.getElementById('modal-confirm').classList.add('hidden');
   document.getElementById('modal-loading').classList.remove('hidden');
 
@@ -7655,6 +7674,8 @@ function checkTrialStatus(){
   const approved = localStorage.getItem('apex_approved_tester');
   const trialStart = localStorage.getItem('apex_trial_start');
   const trialEmail = localStorage.getItem('apex_trial_email');
+  const storedFP = localStorage.getItem('apex_trial_fp');
+  const currentFP = getDeviceFingerprint();
   
   // APPROVED TESTER - FULL ACCESS
   if(approved === 'true'){
@@ -7663,12 +7684,22 @@ function checkTrialStatus(){
     return true; // Allow access
   }
   
-  // TRIAL USER - CHECK IF EXPIRED
+  // TRIAL USER - CHECK IF EXPIRED & DEVICE MATCHES
   if(mode === 'trial' && trialStart && trialEmail){
+    // Check device fingerprint
+    if(!storedFP){
+      // First time on this device - store fingerprint
+      localStorage.setItem('apex_trial_fp', currentFP);
+    } else if(storedFP !== currentFP){
+      // Device changed - potential abuse (reset trial attempt)
+      console.warn('Trial device mismatch detected');
+      // Still allow access but log it (for Supabase later)
+    }
+    
     const startTime = parseInt(trialStart);
     const now = Date.now();
     const elapsedDays = Math.floor((now - startTime) / (1000 * 60 * 60 * 24));
-    const daysRemaining = Math.max(0, 7 - elapsedDays);
+    const daysRemaining = Math.max(0, TRIAL_DAYS - elapsedDays);
     
     if(daysRemaining > 0){
       // Trial still active
@@ -7729,47 +7760,57 @@ function showAccessGateModal(){
 }
 
 function showPaywallModal(email){
+  // Get current theme colors
+  const themeId = localStorage.getItem('apex_app_theme') || 'cpat';
+  const themeColors = THEME_TC[themeId] || THEME_TC.cpat;
+  
   const modal = document.createElement('div');
   modal.id = 'paywall-modal';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)';
   
   const box = document.createElement('div');
-  box.style.cssText = 'background:#1a5c52;border:2px solid #2a7a6e;border-radius:12px;padding:40px;max-width:480px;width:100%';
+  box.style.cssText = 'background:' + themeColors.bg + ';border:2px solid ' + themeColors.mid + ';border-radius:12px;padding:40px;max-width:480px;width:100%';
   
   const title = document.createElement('div');
-  title.style.cssText = 'font-family:Bebas Neue,cursive;font-size:28px;letter-spacing:2px;color:#f5eed8;margin-bottom:16px;text-align:center';
+  title.style.cssText = 'font-family:Bebas Neue,cursive;font-size:32px;letter-spacing:3px;color:' + themeColors.text + ';margin-bottom:12px;text-align:center';
   title.textContent = 'TRIAL EXPIRED';
   box.appendChild(title);
   
   const desc = document.createElement('div');
-  desc.style.cssText = 'color:#c9b97a;font-size:12px;margin-bottom:24px;line-height:1.8;text-align:center';
-  desc.innerHTML = 'Your 7-day trial has ended.<br><br>' + email + '<br><br>Choose a plan to continue:';
+  desc.style.cssText = 'font-family:Space Mono,monospace;color:' + themeColors.muted + ';font-size:11px;margin-bottom:28px;line-height:1.8;text-align:center';
+  desc.innerHTML = 'Your 30-day trial has ended.<br><br><strong style="color:' + themeColors.text + '">' + email + '</strong><br><br>Choose a plan to continue:';
   box.appendChild(desc);
   
   // Option 1: APEX Absolute (Complete Bundle)
   const opt1 = document.createElement('button');
-  opt1.style.cssText = 'display:block;width:100%;padding:16px;background:#d4520a;border:none;border-radius:6px;color:#f5eed8;font-weight:600;cursor:pointer;margin-bottom:12px;font-size:12px;letter-spacing:1px;text-transform:uppercase';
-  opt1.innerHTML = 'ABSOLUTE APEX<br><span style="font-size:10px;font-weight:normal">$40 • Core Lifetime + 1 Year Pass</span>';
+  opt1.style.cssText = 'display:block;width:100%;padding:16px;background:' + themeColors.acc + ';border:none;border-radius:6px;color:' + themeColors.text + ';font-family:Space Mono,monospace;font-weight:700;cursor:pointer;margin-bottom:12px;font-size:11px;letter-spacing:1px;text-transform:uppercase;transition:all .2s';
+  opt1.innerHTML = '⭐ ABSOLUTE APEX<br><span style="font-size:10px;font-weight:normal;display:block;margin-top:4px">$40 • Core Lifetime + 1 Year Pass</span>';
+  opt1.onmouseover = function(){ opt1.style.opacity = '0.85'; };
+  opt1.onmouseout = function(){ opt1.style.opacity = '1'; };
   opt1.onclick = function(){ window.location.href = 'https://jevspwp.gumroad.com/l/kgpcu'; };
   box.appendChild(opt1);
   
   // Option 2: APEX Core (Lifetime)
   const opt2 = document.createElement('button');
-  opt2.style.cssText = 'display:block;width:100%;padding:16px;background:transparent;border:2px solid #d4520a;border-radius:6px;color:#d4520a;font-weight:600;cursor:pointer;margin-bottom:12px;font-size:12px;letter-spacing:1px;text-transform:uppercase';
-  opt2.innerHTML = 'APEX CORE<br><span style="font-size:10px;font-weight:normal">$15 • Lifetime Access</span>';
+  opt2.style.cssText = 'display:block;width:100%;padding:16px;background:transparent;border:2px solid ' + themeColors.acc + ';border-radius:6px;color:' + themeColors.acc + ';font-family:Space Mono,monospace;font-weight:700;cursor:pointer;margin-bottom:12px;font-size:11px;letter-spacing:1px;text-transform:uppercase;transition:all .2s';
+  opt2.innerHTML = 'APEX CORE<br><span style="font-size:10px;font-weight:normal;color:' + themeColors.muted + ';display:block;margin-top:4px">$15 • Lifetime + 1 Month AI Trial</span>';
+  opt2.onmouseover = function(){ opt2.style.background = 'rgba(255,255,255,.05)'; };
+  opt2.onmouseout = function(){ opt2.style.background = 'transparent'; };
   opt2.onclick = function(){ window.location.href = 'https://jevspwp.gumroad.com/l/apexcore'; };
   box.appendChild(opt2);
   
   // Option 3: APEX Pass (Monthly Subscription)
   const opt3 = document.createElement('button');
-  opt3.style.cssText = 'display:block;width:100%;padding:16px;background:transparent;border:2px solid #d4520a;border-radius:6px;color:#d4520a;font-weight:600;cursor:pointer;margin-bottom:24px;font-size:12px;letter-spacing:1px;text-transform:uppercase';
-  opt3.innerHTML = 'APEX PASS<br><span style="font-size:10px;font-weight:normal">$4.99/mo • AI Coaching + Alerts</span>';
+  opt3.style.cssText = 'display:block;width:100%;padding:16px;background:transparent;border:2px solid ' + themeColors.acc + ';border-radius:6px;color:' + themeColors.acc + ';font-family:Space Mono,monospace;font-weight:700;cursor:pointer;margin-bottom:24px;font-size:11px;letter-spacing:1px;text-transform:uppercase;transition:all .2s';
+  opt3.innerHTML = 'APEX PASS<br><span style="font-size:10px;font-weight:normal;color:' + themeColors.muted + ';display:block;margin-top:4px">$4.99/mo • AI Coaching + Alerts</span>';
+  opt3.onmouseover = function(){ opt3.style.background = 'rgba(255,255,255,.05)'; };
+  opt3.onmouseout = function(){ opt3.style.background = 'transparent'; };
   opt3.onclick = function(){ window.location.href = 'https://jevspwp.gumroad.com/l/apexpass'; };
   box.appendChild(opt3);
   
   // Option 4: Extend trial (dev only - hidden in production)
   const opt4 = document.createElement('button');
-  opt4.style.cssText = 'display:none;width:100%;padding:12px;background:transparent;border:1px solid #2a7a6e;border-radius:6px;color:#c9b97a;font-size:10px;cursor:pointer;letter-spacing:.5px;text-transform:uppercase';
+  opt4.style.cssText = 'display:none;width:100%;padding:12px;background:transparent;border:1px solid ' + themeColors.mid + ';border-radius:6px;color:' + themeColors.muted + ';font-family:Space Mono,monospace;font-size:10px;cursor:pointer;letter-spacing:.5px;text-transform:uppercase';
   opt4.textContent = 'Extend Trial (Dev Only)';
   opt4.onclick = function(){ 
     localStorage.setItem('apex_trial_start', Date.now().toString());
