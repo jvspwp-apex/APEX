@@ -11,55 +11,67 @@
 <link rel="manifest" href="#" id="manifest-link">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=Metal+Mania&display=swap" rel="stylesheet">
 <!-- Supabase Client Library -->
-<script async src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-// Supabase initialization
+// Supabase initialization with better error handling
 let SUPABASE_CLIENT = null;
-window.addEventListener('DOMContentLoaded', function(){
-  if(typeof supabase !== 'undefined'){
+
+function initSupabaseAPEX(){
+  if(typeof supabase === 'undefined'){
+    console.warn('Supabase not loaded yet, retrying...');
+    setTimeout(initSupabaseAPEX, 500);
+    return;
+  }
+  try {
     SUPABASE_CLIENT = supabase.createClient(
       'https://qcdodaccujxvhjfvzbzp.supabase.co',
       'sb_publishable_6NupE55C_LSHo6aYSc-uew_cXYP3vXI'
     );
+    console.log('✓ Supabase initialized in APEX');
+  } catch(e){
+    console.error('Supabase init failed:', e);
   }
-});
+}
+
+// Initialize on page load
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', initSupabaseAPEX);
+} else {
+  initSupabaseAPEX();
+}
 
 // Track trial signup in Supabase
 async function logTrialSignup(email, deviceFP){
-  if(!SUPABASE_CLIENT) return;
+  if(!SUPABASE_CLIENT){
+    console.warn('Supabase not ready');
+    return;
+  }
   try {
-    const { data, error } = await SUPABASE_CLIENT
-      .from('trial_users')
-      .insert([{
-        email: email,
-        device_fingerprint: deviceFP,
-        trial_status: 'active'
-      }]);
-    if(error) console.warn('Trial signup log failed:', error);
-  } catch(e){ console.warn('Trial signup error:', e); }
+    const { error } = await SUPABASE_CLIENT.from('trial_users').insert([{
+      email: email,
+      device_fingerprint: deviceFP,
+      trial_status: 'active'
+    }]);
+    if(error) console.error('Trial signup error:', error);
+    else console.log('✓ Trial signup logged:', email);
+  } catch(e){ console.error('Trial signup exception:', e); }
 }
 
 // Send verification email (background)
 async function sendVerificationEmail(email){
   if(!SUPABASE_CLIENT) return;
   try {
-    // Generate verification token
     const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 7 days
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
     
-    const { error } = await SUPABASE_CLIENT
-      .from('email_tokens')
-      .insert([{
-        email: email,
-        token: token,
-        expires_at: expiresAt
-      }]);
-    if(error) console.warn('Token creation failed:', error);
-    
-    // Send verification email via Supabase Auth (or external service later)
-    // For now, just log that verification was initiated
-    console.log('Verification email initiated for:', email);
-  } catch(e){ console.warn('Verification email error:', e); }
+    const { error } = await SUPABASE_CLIENT.from('email_tokens').insert([{
+      email: email,
+      token: token,
+      expires_at: expiresAt
+    }]);
+    if(error) console.error('Email token error:', error);
+    else console.log('✓ Verification token created:', email);
+  } catch(e){ console.error('Email token exception:', e); }
 }
 
 // Track conversion (trial → paid)
@@ -7815,16 +7827,24 @@ function checkTrialStatus(){
 
 function showTestingModeBanner(email){
   const banner = document.createElement('div');
-  banner.style.cssText = 'position:fixed;top:0;left:0;right:0;background:linear-gradient(90deg,#1a5c52,#2a7a6e);color:#f5eed8;padding:8px;text-align:center;font-size:11px;font-weight:600;letter-spacing:.5px;z-index:500;border-bottom:1px solid #d4520a';
+  banner.id = 'testing-banner';
+  banner.style.cssText = 'position:fixed;top:0;left:0;right:0;background:linear-gradient(90deg,#1a5c52,#2a7a6e);color:#f5eed8;padding:6px 8px;text-align:center;font-size:10px;font-weight:600;letter-spacing:.5px;z-index:150;border-bottom:1px solid #d4520a;height:auto';
   banner.textContent = '🧪 TESTING MODE · ' + email + ' · Full Access Unlocked';
   document.body.appendChild(banner);
+  
+  // Add padding to body to offset banner
+  document.body.style.paddingTop = '32px';
 }
 
 function showTrialBanner(daysRemaining, email){
   const banner = document.createElement('div');
-  banner.style.cssText = 'position:fixed;top:0;left:0;right:0;background:linear-gradient(90deg,#1a5c52,#2a7a6e);color:#f5eed8;padding:8px;text-align:center;font-size:11px;font-weight:600;letter-spacing:.5px;z-index:500;border-bottom:1px solid #d4520a';
+  banner.id = 'trial-banner';
+  banner.style.cssText = 'position:fixed;top:0;left:0;right:0;background:linear-gradient(90deg,#1a5c52,#2a7a6e);color:#f5eed8;padding:6px 8px;text-align:center;font-size:10px;font-weight:600;letter-spacing:.5px;z-index:150;border-bottom:1px solid #d4520a;height:auto';
   banner.textContent = '⏳ TRIAL · ' + daysRemaining + ' day' + (daysRemaining === 1 ? '' : 's') + ' remaining · ' + email;
   document.body.appendChild(banner);
+  
+  // Add padding to body to offset banner
+  document.body.style.paddingTop = '32px';
 }
 
 function showAccessGateModal(){
