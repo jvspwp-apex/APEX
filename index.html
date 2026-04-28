@@ -5,6 +5,83 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>APEX — AI Training & Performance Tracker</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=Metal+Mania&family=Oswald:wght@500;700&family=Chakra+Petch:wght@600;700&family=Rye&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- Supabase Client Library -->
+<script async src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// Supabase initialization
+let SUPABASE_CLIENT = null;
+window.addEventListener('DOMContentLoaded', function(){
+  if(typeof supabase !== 'undefined'){
+    SUPABASE_CLIENT = supabase.createClient(
+      'https://qcdodaccujxvhjfvzbzp.supabase.co',
+      'sb_publishable_6NupE55C_LSHo6aYSc-uew_cXYP3vXI'
+    );
+  }
+});
+
+// Log trial signup to Supabase
+async function logTrialSignup(email, deviceFP){
+  if(!SUPABASE_CLIENT) return;
+  try {
+    await SUPABASE_CLIENT.from('trial_users').insert([{
+      email: email,
+      device_fingerprint: deviceFP,
+      trial_status: 'active'
+    }]);
+    // Send verification email in background
+    sendVerificationEmail(email);
+  } catch(e){ console.warn('Trial signup log:', e); }
+}
+
+// Send verification email
+async function sendVerificationEmail(email){
+  if(!SUPABASE_CLIENT) return;
+  try {
+    const token = Math.random().toString(36).substring(2,15) + Math.random().toString(36).substring(2,15);
+    const expiresAt = new Date(Date.now() + 7*24*60*60*1000).toISOString();
+    await SUPABASE_CLIENT.from('email_tokens').insert([{
+      email: email,
+      token: token,
+      expires_at: expiresAt
+    }]);
+  } catch(e){ console.warn('Email token:', e); }
+}
+
+// Log conversion
+async function logConversion(email, purchaseType, deviceFP){
+  if(!SUPABASE_CLIENT) return;
+  try {
+    await SUPABASE_CLIENT.from('trial_users')
+      .update({ trial_status: 'converted', converted_at: new Date().toISOString() })
+      .eq('email', email);
+    await SUPABASE_CLIENT.from('trial_analytics').insert([{
+      email: email,
+      event_type: 'converted_' + purchaseType,
+      device_fingerprint: deviceFP,
+      purchase_type: purchaseType
+    }]);
+  } catch(e){ console.warn('Conversion log:', e); }
+}
+
+// Device fingerprint for tracking (same as APEX.html)
+function getDeviceFingerprintLanding(){
+  try {
+    const raw = [
+      screen.width, screen.height, screen.colorDepth,
+      navigator.hardwareConcurrency || 0,
+      navigator.language || '',
+      Intl.DateTimeFormat().resolvedOptions().timeZone || '',
+      navigator.platform || ''
+    ].join('|');
+    let h = 5381;
+    for(let i = 0; i < raw.length; i++){
+      h = ((h << 5) + h) ^ raw.charCodeAt(i);
+      h = h >>> 0;
+    }
+    return h.toString(36);
+  } catch(e){ return 'fp-unknown'; }
+}
+</script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
@@ -1887,12 +1964,20 @@ function startFreeTrial(){
       alert('Please enter a valid email');
       return;
     }
+    // Get device fingerprint for tracking
+    const deviceFP = getDeviceFingerprintLanding();
+    
     // Start 1-month free trial for this email
     localStorage.setItem('apex_trial_email', email);
     localStorage.setItem('apex_access_mode', 'trial');
     localStorage.setItem('apex_trial_start', Date.now().toString());
     localStorage.setItem('apex_trial_days', '30');
     localStorage.setItem('apex_purchase_type', 'trial');
+    localStorage.setItem('apex_trial_fp', deviceFP);
+    
+    // Log to Supabase (async, non-blocking)
+    logTrialSignup(email, deviceFP);
+    
     modal.remove();
     window.location.href = '/APEX.html';
   };
@@ -2135,6 +2220,8 @@ function showPricingPlans(email){
   opt1.onmouseout = function(){ opt1.style.transform = ''; opt1.style.boxShadow = ''; };
   opt1.onclick = function(){ 
     recordPurchaseIntent(email, 'absolute');
+    const deviceFP = getDeviceFingerprintLanding();
+    logConversion(email, 'absolute', deviceFP);
     window.location.href = 'https://jevspwp.gumroad.com/l/kgpcu'; 
   };
   box.appendChild(opt1);
@@ -2147,6 +2234,8 @@ function showPricingPlans(email){
   opt2.onmouseout = function(){ opt2.style.background = ''; opt2.style.borderColor = '#d4520a'; };
   opt2.onclick = function(){ 
     recordPurchaseIntent(email, 'core');
+    const deviceFP = getDeviceFingerprintLanding();
+    logConversion(email, 'core', deviceFP);
     window.location.href = 'https://jevspwp.gumroad.com/l/apexcore'; 
   };
   box.appendChild(opt2);
@@ -2159,6 +2248,8 @@ function showPricingPlans(email){
   opt3.onmouseout = function(){ opt3.style.background = ''; opt3.style.borderColor = '#d4520a'; };
   opt3.onclick = function(){ 
     recordPurchaseIntent(email, 'pass');
+    const deviceFP = getDeviceFingerprintLanding();
+    logConversion(email, 'pass', deviceFP);
     window.location.href = 'https://jevspwp.gumroad.com/l/apexpass'; 
   };
   box.appendChild(opt3);

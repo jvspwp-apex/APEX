@@ -10,6 +10,102 @@
 <title>APEX — AI Training & Performance Tracker</title>
 <link rel="manifest" href="#" id="manifest-link">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=Metal+Mania&display=swap" rel="stylesheet">
+<!-- Supabase Client Library -->
+<script async src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// Supabase initialization
+let SUPABASE_CLIENT = null;
+window.addEventListener('DOMContentLoaded', function(){
+  if(typeof supabase !== 'undefined'){
+    SUPABASE_CLIENT = supabase.createClient(
+      'https://qcdodaccujxvhjfvzbzp.supabase.co',
+      'sb_publishable_6NupE55C_LSHo6aYSc-uew_cXYP3vXI'
+    );
+  }
+});
+
+// Track trial signup in Supabase
+async function logTrialSignup(email, deviceFP){
+  if(!SUPABASE_CLIENT) return;
+  try {
+    const { data, error } = await SUPABASE_CLIENT
+      .from('trial_users')
+      .insert([{
+        email: email,
+        device_fingerprint: deviceFP,
+        trial_status: 'active'
+      }]);
+    if(error) console.warn('Trial signup log failed:', error);
+  } catch(e){ console.warn('Trial signup error:', e); }
+}
+
+// Send verification email (background)
+async function sendVerificationEmail(email){
+  if(!SUPABASE_CLIENT) return;
+  try {
+    // Generate verification token
+    const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 7 days
+    
+    const { error } = await SUPABASE_CLIENT
+      .from('email_tokens')
+      .insert([{
+        email: email,
+        token: token,
+        expires_at: expiresAt
+      }]);
+    if(error) console.warn('Token creation failed:', error);
+    
+    // Send verification email via Supabase Auth (or external service later)
+    // For now, just log that verification was initiated
+    console.log('Verification email initiated for:', email);
+  } catch(e){ console.warn('Verification email error:', e); }
+}
+
+// Track conversion (trial → paid)
+async function logConversion(email, purchaseType, deviceFP){
+  if(!SUPABASE_CLIENT) return;
+  try {
+    // Update trial_users status
+    await SUPABASE_CLIENT
+      .from('trial_users')
+      .update({ trial_status: 'converted', converted_at: new Date().toISOString() })
+      .eq('email', email);
+    
+    // Log analytics event
+    await SUPABASE_CLIENT
+      .from('trial_analytics')
+      .insert([{
+        email: email,
+        event_type: 'converted_' + purchaseType,
+        device_fingerprint: deviceFP,
+        purchase_type: purchaseType
+      }]);
+  } catch(e){ console.warn('Conversion log error:', e); }
+}
+
+// Verify email token
+async function verifyEmailToken(email, token){
+  if(!SUPABASE_CLIENT) return false;
+  try {
+    const { data, error } = await SUPABASE_CLIENT
+      .from('email_tokens')
+      .update({ used_at: new Date().toISOString() })
+      .eq('email', email)
+      .eq('token', token)
+      .select();
+    
+    if(!error && data && data.length > 0){
+      await SUPABASE_CLIENT
+        .from('trial_users')
+        .update({ email_verified: true, verified_at: new Date().toISOString() })
+        .eq('email', email);
+      return true;
+    }
+  } catch(e){ console.warn('Email verification error:', e); }
+  return false;
+}
+</script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
