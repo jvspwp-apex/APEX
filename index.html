@@ -228,7 +228,7 @@ body[data-font="classic"]{--font-display:'Bebas Neue',cursive !important}
 .hero h1{font-family:var(--font-display);font-size:clamp(38px,9vw,86.6px);letter-spacing:4px;
   line-height:.92;margin-bottom:20px;color:var(--text);opacity:1;
   animation:fadeUp .7s var(--ease) .1s both}
-@media(max-width:480px){.hero h1{font-size:clamp(32px,11vw,56px);letter-spacing:2px;line-height:1}}
+@media(max-width:480px){.hero h1{font-size:clamp(28px,7vw,48px);letter-spacing:2px;line-height:1;margin-bottom:16px}}
 .hero h1 .accent{color:var(--hi);position:relative;display:inline-block;
   text-shadow:0 0 40px rgba(244,135,75,.35)}
 /* Bolder orange accent across all sections */
@@ -279,6 +279,9 @@ body[data-theme="metal"] .hero h1 .accent{color:rgb(192,18,0)}
     inset 0 0 0 2px #1a1a1a;
   position:relative;transform:rotate(-3deg) rotateY(-8deg) rotateX(4deg);
   transition:transform .6s var(--ease)}
+@media(max-width:960px){.phone{width:280px;height:580px}}
+@media(max-width:720px){.phone{width:240px;height:500px;padding:8px}}
+@media(max-width:480px){.phone{width:200px;height:420px;padding:6px}}
 .phone:hover{transform:rotate(-1deg) rotateY(-4deg) rotateX(2deg) scale(1.02)}
 .phone-notch{position:absolute;top:18px;left:50%;transform:translateX(-50%);
   width:110px;height:28px;background:#000;border-radius:99px;z-index:10}
@@ -459,19 +462,24 @@ section{padding:100px 28px;position:relative}
   background:rgba(245,238,216,.03);border:1.5px solid rgba(245,238,216,.1);
   border-radius:20px;padding:40px;min-height:480px;
   transition:border-color .4s var(--ease),background .4s var(--ease)}
-@media(max-width:900px){.theme-display{grid-template-columns:1fr;padding:24px;gap:24px}}
+@media(max-width:900px){.theme-display{grid-template-columns:1fr;padding:24px;gap:24px;min-height:auto}}
+@media(max-width:480px){.theme-display{padding:16px;gap:16px;border-radius:12px}}
 .theme-info-pane h3{font-family:var(--font-display);font-size:48px;letter-spacing:4px;
   margin-bottom:8px;line-height:1}
+@media(max-width:480px){.theme-info-pane h3{font-size:32px;letter-spacing:2px}}
 .theme-info-pane h3.metal{font-family:'Metal Mania',cursive;letter-spacing:6px}
 .theme-tagline{font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:24px}
+@media(max-width:480px){.theme-tagline{font-size:11px}}
 .theme-palette-row{display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap}
 .pal-card{text-align:center}
 .pal-swatch{width:64px;height:64px;border-radius:12px;margin-bottom:6px;
   border:1.5px solid rgba(245,238,216,.08);transition:transform .25s var(--spring)}
+@media(max-width:480px){.pal-swatch{width:48px;height:48px}}
 .pal-swatch:hover{transform:scale(1.08) rotate(-3deg)}
 .pal-hex{font-size:9px;color:var(--muted);letter-spacing:.5px;font-family:'Space Mono'}
 .theme-feats{display:flex;flex-direction:column;gap:8px}
 .theme-feat{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted)}
+@media(max-width:480px){.theme-feat{font-size:11px;gap:8px}}
 .theme-feat .chk{display:none}
 
 .theme-preview-pane{display:flex;justify-content:center;align-items:center}
@@ -804,17 +812,17 @@ body[data-theme="aurora"]::before{background:
   <div class="hero-bg" id="hero-bg"></div>
   <canvas id="fx-canvas" class="fx-canvas"></canvas>
   <div class="hero-grid"></div>
-  <div class="hero-inner" style="font-size: 8px">
-    <div style="font-size: 8px">
-      <div class="hero-eyebrow" style="font-size: 18px"><span class="live"></span>AI-POWERED · BUILT FOR THE GRIND</div>
-      <h1 style="font-size: 89px">TRAIN <span class="accent">HARDER</span>.<br>TRACK <span class="accent">EVERYTHING</span>.</h1>
-      <p class="hero-sub" style="font-size: 1px">Build strength, track progress, own your fitness. Three built-in plans to start free — or describe any goal and Claude builds a custom program in seconds. BYOK. No account. Works offline.</p>
+  <div class="hero-inner">
+    <div>
+      <div class="hero-eyebrow"><span class="live"></span>AI-POWERED · BUILT FOR THE GRIND</div>
+      <h1>TRAIN <span class="accent">HARDER</span>.<br>TRACK <span class="accent">EVERYTHING</span>.</h1>
+      <p class="hero-sub">Build strength, track progress, own your fitness. Three built-in plans to start free — or describe any goal and Claude builds a custom program in seconds. BYOK. No account. Works offline.</p>
       <div class="hero-cta-row">
-        <button class="btn-primary" onclick="document.getElementById('final').scrollIntoView({behavior:'smooth'})" style="font-size: 18px">
+        <button class="btn-primary" onclick="document.getElementById('final').scrollIntoView({behavior:'smooth'})">
           START TRAINING <span>→</span>
         </button>
       </div>
-      <div class="hero-stats" style="font-size: 15px">
+      <div class="hero-stats">
         <div class="stat"><div class="n">6</div><div class="l">Themes</div></div>
         <div class="stat"><div class="n">118</div><div class="l">Daily Quotes</div></div>
         <div class="stat"><div class="n">∞</div><div class="l">AI Plans</div></div>
@@ -1169,7 +1177,9 @@ body[data-theme="aurora"]::before{background:
     <h2>STOP PLANNING.<br><span class="underline">START TRAINING.</span></h2>
     <p>APEX is free. Runs in your browser. Installs to your phone. Bring your own Anthropic API key and you're training in 60 seconds.</p>
     <div class="hero-cta-row" style="justify-content:center">
-      <!-- Top LAUNCH APEX button removed - use bottom button instead -->
+      <button class="btn-primary" onclick="startFreeTrial()">
+        LAUNCH APEX <span>→</span>
+      </button>
     </div>
   </div>
 </section>
