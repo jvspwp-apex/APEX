@@ -40,6 +40,22 @@ if(document.readyState === 'loading'){
   initSupabaseAPEX();
 }
 
+// Log session start when page loads
+window.addEventListener('load', function(){
+  const email = localStorage.getItem('apex_trial_email') || localStorage.getItem('apex_sign_in_email');
+  if(email){
+    logSessionStart(email);
+  }
+});
+
+// Log session end when page unloads
+window.addEventListener('beforeunload', function(){
+  const email = localStorage.getItem('apex_trial_email') || localStorage.getItem('apex_sign_in_email');
+  if(email){
+    logSessionEnd(email);
+  }
+});
+
 // Track trial signup in Supabase
 async function logTrialSignup(email, deviceFP){
   if(!SUPABASE_CLIENT){
@@ -72,6 +88,61 @@ async function sendVerificationEmail(email){
     if(error) console.error('Email token error:', error);
     else console.log('✓ Verification token created:', email);
   } catch(e){ console.error('Email token exception:', e); }
+}
+
+// ── NEW: Log API Usage (plan generation, coaching, etc.) ──
+async function logAPIUsage(email, eventType, tokensUsed){
+  if(!SUPABASE_CLIENT || !email) return;
+  try {
+    // Estimate cost: Claude Sonnet ~$3 per 1M input tokens
+    const costUSD = (tokensUsed / 1000000) * 3;
+    
+    const { error } = await SUPABASE_CLIENT.from('api_usage').insert([{
+      email: email,
+      event_type: eventType,
+      tokens_used: tokensUsed,
+      cost_usd: parseFloat(costUSD.toFixed(4))
+    }]);
+    if(error) console.error('API usage log error:', error);
+    else console.log('✓ API usage logged:', email, eventType, 'tokens:', tokensUsed, 'cost:', costUSD.toFixed(4));
+  } catch(e){ console.error('API usage exception:', e); }
+}
+
+// ── NEW: Log User Engagement (sessions, features, duration) ──
+async function logEngagement(email, eventType, featureName, durationSeconds){
+  if(!SUPABASE_CLIENT || !email) return;
+  try {
+    const { error } = await SUPABASE_CLIENT.from('user_engagement').insert([{
+      email: email,
+      event_type: eventType,
+      feature_name: featureName,
+      duration_seconds: durationSeconds
+    }]);
+    if(error) console.error('Engagement log error:', error);
+    else console.log('✓ Engagement logged:', email, eventType, featureName);
+  } catch(e){ console.error('Engagement exception:', e); }
+}
+
+// ── NEW: Log Session Start ──
+async function logSessionStart(email){
+  if(!SUPABASE_CLIENT || !email) return;
+  sessionStorage.setItem('apex_session_start', Date.now().toString());
+  await logEngagement(email, 'session_start', null, null);
+}
+
+// ── NEW: Log Session End ──
+async function logSessionEnd(email){
+  if(!SUPABASE_CLIENT || !email) return;
+  const startTime = parseInt(sessionStorage.getItem('apex_session_start') || '0');
+  const durationSeconds = Math.floor((Date.now() - startTime) / 1000);
+  await logEngagement(email, 'session_end', null, durationSeconds);
+  sessionStorage.removeItem('apex_session_start');
+}
+
+// ── NEW: Log Feature Usage ──
+async function logFeatureUsed(email, featureName){
+  if(!SUPABASE_CLIENT || !email) return;
+  await logEngagement(email, 'feature_used', featureName, null);
 }
 
 // Track conversion (trial → paid)
@@ -7630,6 +7701,20 @@ async function generatePlan(){
     savePlanPrompt(plan.id, parsedIntent, selectedDays);
     goals.push(plan);
     sv('apex_generated_goals',goals.filter(g=>!g.isBuiltIn));
+    
+    // ── Log API usage for Pass/Absolute users ──
+    const userEmail = localStorage.getItem('apex_trial_email') || localStorage.getItem('apex_sign_in_email');
+    if(userEmail && data.usage){
+      const totalTokens = (data.usage.input_tokens || 0) + (data.usage.output_tokens || 0);
+      logAPIUsage(userEmail, 'plan_generated', totalTokens);
+      console.log('✓ API usage logged - Input:', data.usage.input_tokens, 'Output:', data.usage.output_tokens);
+    }
+    
+    // Log feature usage
+    if(userEmail){
+      logFeatureUsed(userEmail, 'ai_plan_generation');
+    }
+    
     document.getElementById('modal-loading').classList.add('hidden');
     document.getElementById('modal-success').classList.remove('hidden');
     document.getElementById('plan-name-display').textContent=plan.label;

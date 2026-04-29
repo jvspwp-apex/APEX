@@ -484,12 +484,12 @@ section{padding:100px 28px;position:relative}
 
 .theme-preview-pane{display:flex;justify-content:center;align-items:center}
 /* ── SAMSUNG Z FOLD ── */
-.zfold{position:relative;width:520px;height:386px;flex-shrink:0;
+.zfold{position:relative;width:340px;height:253px;flex-shrink:0;
   filter:drop-shadow(0 32px 64px rgba(0,0,0,.7));
   animation:zfoldOpen 1.4s cubic-bezier(0.34,1.2,0.64,1) forwards;margin:0 auto}
-@media(max-width:960px){.zfold{width:380px;height:280px}}
-@media(max-width:720px){.zfold{width:320px;height:240px;filter:drop-shadow(0 16px 32px rgba(0,0,0,.5))}}
-@media(max-width:480px){.zfold{width:240px;height:180px;filter:drop-shadow(0 8px 16px rgba(0,0,0,.4))}}
+@media(max-width:960px){.zfold{width:280px;height:208px}}
+@media(max-width:720px){.zfold{width:240px;height:180px;filter:drop-shadow(0 16px 32px rgba(0,0,0,.5))}}
+@media(max-width:480px){.zfold{width:180px;height:135px;filter:drop-shadow(0 8px 16px rgba(0,0,0,.4))}}
 @keyframes zfoldOpen{
   0%{transform:perspective(900px) rotateY(-60deg) scale(.85);opacity:0}
   40%{opacity:1}
@@ -537,52 +537,50 @@ section{padding:100px 28px;position:relative}
 .zfold-right-content{position:absolute;inset:0;overflow:hidden}
 /* Left: mini nav sidebar */
 .zf-sidebar{position:absolute;top:0;bottom:0;left:0;width:100%;
-  display:flex;flex-direction:column;padding:10px 8px}
-.zf-sidebar-hd{border-bottom:1.5px solid var(--acc);padding-bottom:8px;margin-bottom:10px;
+  display:flex;flex-direction:column;padding:5% 4%}
+.zf-sidebar-hd{border-bottom:1.5px solid var(--acc);padding-bottom:5%;margin-bottom:8%;
   transition:border-color .4s var(--ease)}
-.zf-logo{font-family:var(--font-display);font-size:18px;letter-spacing:2px;color:var(--text);line-height:1}
+.zf-logo{font-family:var(--font-display);font-size:clamp(12px,4vw,18px);letter-spacing:2px;color:var(--text);line-height:1}
 .zf-badge{display:inline-block;background:var(--acc);color:var(--text);font-family:var(--font-display);
-  font-size:7px;letter-spacing:1px;padding:1px 5px;border-radius:2px;margin-top:3px;
+  font-size:clamp(5px,2vw,7px);letter-spacing:1px;padding:1px 5px;border-radius:2px;margin-top:3px;
   transition:background .4s var(--ease)}
-.zf-nav-item{display:flex;align-items:center;gap:6px;padding:8px 8px;border-radius:6px;
-  font-size:9px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:rgba(245,238,216,.45);
+.zf-nav-item{display:flex;align-items:center;gap:4%;padding:6% 4%;border-radius:6px;
+  font-size:clamp(6px,1.5vw,9px);font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:rgba(245,238,216,.45);
   cursor:pointer;transition:all .2s;margin-bottom:1px}
-.zf-nav-item.active{background:rgba(245,238,216,.07);color:var(--hi)}
-.zf-nav-item.active svg{opacity:1}
-.zf-nav-item svg{width:10px;height:10px;opacity:.5;flex-shrink:0}
+.zf-nav-item svg{width:clamp(8px,2vw,10px);height:clamp(8px,2vw,10px);opacity:.5;flex-shrink:0}
 .zf-day-chip{margin-top:auto;background:rgba(245,238,216,.05);border:1px solid rgba(245,238,216,.1);
-  border-radius:6px;padding:6px 8px}
-.zf-day-chip-label{font-size:6px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
-.zf-day-chip-name{font-family:var(--font-display);font-size:12px;letter-spacing:1px;color:var(--text)}
-.zf-day-chip-sub{font-size:6px;color:var(--muted);margin-top:1px}
+  border-radius:6px;padding:4% 5%}
+.zf-day-chip-label{font-size:clamp(5px,1.2vw,6px);letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+.zf-day-chip-name{font-family:var(--font-display);font-size:clamp(10px,2.5vw,12px);letter-spacing:1px;color:var(--text)}
+.zf-day-chip-sub{font-size:clamp(5px,1.2vw,6px);color:var(--muted);margin-top:1px}
 /* Right: main content pane */
 .zf-main{position:absolute;inset:0;display:flex;flex-direction:column}
-.zf-main-hd{padding:10px 10px 6px;border-bottom:1.5px solid var(--acc);display:flex;
+.zf-main-hd{padding:5% 5% 3%;border-bottom:1.5px solid var(--acc);display:flex;
   align-items:center;justify-content:space-between;flex-shrink:0;
   transition:border-color .4s var(--ease)}
-.zf-main-title{font-family:var(--font-display);font-size:13px;letter-spacing:1.5px;color:var(--text)}
-.zf-main-pct{font-family:var(--font-display);font-size:12px;color:var(--hi);transition:color .4s var(--ease)}
-.zf-main-body{flex:1;overflow:hidden;padding:8px 10px;display:flex;flex-direction:column;gap:5px}
-.zf-ex{display:flex;align-items:center;gap:7px;background:rgba(245,238,216,.04);
-  border:1px solid rgba(245,238,216,.1);border-radius:5px;padding:6px 8px;
+.zf-main-title{font-family:var(--font-display);font-size:clamp(11px,3vw,13px);letter-spacing:1.5px;color:var(--text)}
+.zf-main-pct{font-family:var(--font-display);font-size:clamp(10px,2.5vw,12px);color:var(--hi);transition:color .4s var(--ease)}
+.zf-main-body{flex:1;overflow:hidden;padding:4% 5%;display:flex;flex-direction:column;gap:3%}
+.zf-ex{display:flex;align-items:center;gap:4%;background:rgba(245,238,216,.04);
+  border:1px solid rgba(245,238,216,.1);border-radius:5px;padding:4% 5%;
   transition:all .3s var(--ease)}
 .zf-ex.done{background:rgba(74,222,128,.07);border-color:rgba(74,222,128,.25)}
-.zf-chk{width:14px;height:14px;border-radius:3px;border:1.5px solid rgba(245,238,216,.25);
-  display:flex;align-items:center;justify-content:center;font-size:8px;flex-shrink:0;
+.zf-chk{width:clamp(10px,2.5vw,14px);height:clamp(10px,2.5vw,14px);border-radius:3px;border:1.5px solid rgba(245,238,216,.25);
+  display:flex;align-items:center;justify-content:center;font-size:clamp(6px,1.5vw,8px);flex-shrink:0;
   transition:all .2s}
 .zf-ex.done .zf-chk{background:var(--acc);border-color:var(--acc);color:var(--text);
   transition:background .4s var(--ease),border-color .4s var(--ease)}
-.zf-ex-name{font-size:10px;font-weight:700;color:var(--text)}
-.zf-ex-pr{font-size:8px;color:var(--muted);margin-top:1px}
-.zf-pb-row{display:flex;align-items:center;gap:6px;padding:0 10px;flex-shrink:0;margin-top:2px}
+.zf-ex-name{font-size:clamp(8px,2vw,10px);font-weight:700;color:var(--text)}
+.zf-ex-pr{font-size:clamp(6px,1.5vw,8px);color:var(--muted);margin-top:1px}
+.zf-pb-row{display:flex;align-items:center;gap:4%;padding:0 5%;flex-shrink:0;margin-top:2px}
 .zf-pb-bg{flex:1;height:2px;background:rgba(245,238,216,.1);border-radius:2px;overflow:hidden}
 .zf-pb-fill{height:100%;background:var(--acc);width:33%;transition:background .4s var(--ease),width 1s var(--ease)}
-.zf-pb-label{font-size:6px;color:var(--muted);letter-spacing:.5px;white-space:nowrap}
-.zf-quote-strip{padding:6px 10px;border-top:1px solid rgba(245,238,216,.06);flex-shrink:0;
-  display:flex;align-items:flex-start;gap:6px}
+.zf-pb-label{font-size:clamp(5px,1.2vw,6px);color:var(--muted);letter-spacing:.5px;white-space:nowrap}
+.zf-quote-strip{padding:4% 5%;border-top:1px solid rgba(245,238,216,.06);flex-shrink:0;
+  display:flex;align-items:flex-start;gap:4%}
 .zf-quote-bar{width:2px;background:var(--acc);border-radius:1px;align-self:stretch;flex-shrink:0;
   transition:background .4s var(--ease)}
-.zf-quote-text{font-size:9px;font-style:italic;color:var(--muted);line-height:1.5}
+.zf-quote-text{font-size:clamp(7px,1.8vw,9px);font-style:italic;color:var(--muted);line-height:1.5}
 /* mini-phone kept for backward compat but hidden */
 .mini-phone{display:none}
 .mini-phone-screen{width:100%;height:100%;border-radius:26px;overflow:hidden;
@@ -1002,7 +1000,7 @@ body[data-theme="aurora"]::before{background:
     <p class="sec-sub">APEX doesn't just track workouts. It structures them, motivates through them, and makes you accountable between them.</p>
   </div>
     <div class="proof-bar">
-    <div class="proof-stat reveal reveal-delay-1"><span class="proof-num" style="font-size:28px">💪</span><div class="proof-lbl">Workout Types</div></div>
+    <div class="proof-stat reveal reveal-delay-1"><span class="proof-num">∞</span><div class="proof-lbl">Workout Types</div></div>
     <div class="proof-div"></div>
     <div class="proof-stat reveal reveal-delay-2"><span class="proof-num">3</span><div class="proof-lbl">Built-in Plans</div></div>
     <div class="proof-div"></div>
@@ -1140,7 +1138,23 @@ body[data-theme="aurora"]::before{background:
       <button class="price-cta" onclick="showTrialGateModal()">GET APEX — $15</button>
     </div>
     <div class="price-card featured reveal reveal-delay-2">
-      <div class="price-badge">AI Pass</div>
+      <div class="price-badge">Complete Bundle</div>
+      <div class="price-name">ABSOLUTE APEX</div>
+      <div class="price-amount"><span>$</span>40</div>
+      <div class="price-period">one-time · core forever + 1 year AI</div>
+      <ul class="price-features">
+        <li><div class="pf-dot">✓</div>Everything in APEX Base — lifetime access</li>
+        <li><div class="pf-dot">✓</div>Everything in APEX + AI — for 12 months</li>
+        <li><div class="pf-dot">✓</div>Coach Apex — daily AI coaching feedback</li>
+        <li><div class="pf-dot">✓</div>FDA alerts — supplement & ingredient safety</li>
+        <li><div class="pf-dot">✓</div>PT protocols — injury recovery & rehab programs</li>
+        <li><div class="pf-dot">✓</div>Save $5 off retail price ($45 value)</li>
+        <li><div class="pf-dot">✓</div>After year 1: Core stays forever, renew AI at $30/yr</li>
+      </ul>
+      <button class="price-cta" onclick="showPricingPlans('new-user')">GET ABSOLUTE — $40</button>
+    </div>
+    <div class="price-card reveal reveal-delay-3">
+      <div class="price-badge soft">AI Pass</div>
       <div class="price-name">APEX + AI</div>
       <div class="price-amount"><span>$</span>4<span>/mo</span></div>
       <div class="price-period">optional add-on · cancel anytime</div>
