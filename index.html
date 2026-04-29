@@ -37,22 +37,39 @@ if(document.readyState === 'loading'){
 
 // Log trial signup to Supabase
 async function logTrialSignup(email, deviceFP){
+  // Wait for Supabase to be ready (max 5 seconds)
+  let retries = 0;
+  while(!SUPABASE_CLIENT && retries < 10){
+    await new Promise(r => setTimeout(r, 500));
+    retries++;
+  }
+  
   if(!SUPABASE_CLIENT){
-    console.warn('Supabase not ready for trial signup');
+    console.error('❌ Supabase not ready after 5 seconds');
     return;
   }
+  
+  console.log('🔄 Attempting trial signup for:', email);
+  
   try {
-    const { error } = await SUPABASE_CLIENT.from('trial_users').insert([{
+    const result = await SUPABASE_CLIENT.from('trial_users').insert([{
       email: email,
       device_fingerprint: deviceFP,
       trial_status: 'active'
     }]);
-    if(error) console.error('Trial signup error:', error);
-    else console.log('✓ Trial signup logged:', email);
     
-    // Send verification email in background
-    sendVerificationEmail(email);
-  } catch(e){ console.error('Trial signup exception:', e); }
+    console.log('📤 Insert result:', result);
+    
+    if(result.error){
+      console.error('❌ Trial signup error:', result.error.message || result.error);
+    } else {
+      console.log('✓ Trial signup logged:', email);
+      // Send verification email in background
+      sendVerificationEmail(email);
+    }
+  } catch(e){
+    console.error('❌ Trial signup exception:', e.message, e);
+  }
 }
 
 // Send verification email
@@ -2027,11 +2044,16 @@ function startFreeTrial(){
     localStorage.setItem('apex_purchase_type', 'trial');
     localStorage.setItem('apex_trial_fp', deviceFP);
     
-    // Log to Supabase (async, non-blocking)
-    logTrialSignup(email, deviceFP);
-    
-    modal.remove();
-    window.location.href = '/APEX.html';
+    // Log to Supabase, then redirect after logging completes
+    logTrialSignup(email, deviceFP).then(function(){
+      modal.remove();
+      window.location.href = '/APEX.html';
+    }).catch(function(err){
+      console.error('Trial signup failed:', err);
+      // Still redirect even if logging fails (non-blocking)
+      modal.remove();
+      window.location.href = '/APEX.html';
+    });
   };
   box.appendChild(startBtn);
   
