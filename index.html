@@ -800,7 +800,7 @@ body[data-theme="aurora"]::before{background:
     <div class="themes-coming reveal" style="text-align:center;margin-bottom:16px;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">
       <span style="display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(245,238,216,.1);border-radius:99px;padding:5px 14px">
         <span style="width:6px;height:6px;border-radius:50%;background:var(--acc);box-shadow:0 0 8px var(--acc);animation:pulse 2s infinite;display:inline-block"></span>
-        5 themes live · More coming
+        6 themes live · More coming
       </span>
     </div>
     <div class="theme-display" id="theme-display">
@@ -1020,7 +1020,23 @@ body[data-theme="aurora"]::before{background:
       <button class="price-cta" onclick="showTrialGateModal()">GET APEX — $15</button>
     </div>
     <div class="price-card featured reveal reveal-delay-2">
-      <div class="price-badge">AI Pass</div>
+      <div class="price-badge">Complete Bundle</div>
+      <div class="price-name">ABSOLUTE APEX</div>
+      <div class="price-amount"><span>$</span>40</div>
+      <div class="price-period">one-time · core forever + 1 year AI</div>
+      <ul class="price-features">
+        <li><div class="pf-dot">✓</div>Everything in APEX Base — lifetime access</li>
+        <li><div class="pf-dot">✓</div>Everything in APEX + AI — for 12 months</li>
+        <li><div class="pf-dot">✓</div>Coach Apex — daily AI coaching feedback</li>
+        <li><div class="pf-dot">✓</div>FDA alerts — supplement & ingredient safety</li>
+        <li><div class="pf-dot">✓</div>PT protocols — injury recovery & rehab programs</li>
+        <li><div class="pf-dot">✓</div>Save $5 off retail price ($45 value)</li>
+        <li><div class="pf-dot">✓</div>After year 1: Core stays forever, renew AI at $30/yr</li>
+      </ul>
+      <button class="price-cta" onclick="showTrialGateModal()">GET ABSOLUTE — $40</button>
+    </div>
+    <div class="price-card reveal reveal-delay-3">
+      <div class="price-badge soft">AI Pass</div>
       <div class="price-name">APEX + AI</div>
       <div class="price-amount"><span>$</span>4<span>/mo</span></div>
       <div class="price-period">optional add-on · cancel anytime</div>
@@ -1033,7 +1049,7 @@ body[data-theme="aurora"]::before{background:
         <li><div class="pf-dot">✓</div>Progressive programming — periodized weeks, volume progression</li>
         <li><div class="pf-dot">✓</div>Private by design — key stored only on your device</li>
       </ul>
-      <button class="price-cta" onclick="showTrialGateModal()">START WITH AI — $4/MO</button>
+      <button class="price-cta" onclick="showTrialGateModal()">START WITH AI — $4.99/MO</button>
     </div>
   </div>
   <p class="price-note reveal">Already have a Claude API key? <a href="#">Use BYOK</a> and skip the subscription entirely. Core features never require AI.</p>
@@ -1298,14 +1314,12 @@ const QUOTE_SAMPLES = [
   {cat:'✝ SCRIPTURE',text:'"Be strong and courageous. Do not be afraid."',attr:'— Joshua 1:9'},
   {cat:'🧠 GOGGINS',text:'"When you think you\'re done, you\'re only at 40%."',attr:'— David Goggins'},
   {cat:'🎬 CINEMA',text:'"It\'s not how hard you hit. It\'s how hard you can get hit."',attr:'— Rocky Balboa'},
-  {cat:'⚡ DBZ',text:'"Even a low-class warrior can surpass an elite through hard work."',attr:'— Goku'},
   {cat:'🎖 MILITARY',text:'"Discipline equals freedom."',attr:'— Jocko Willink'},
   {cat:'🏛 LEGENDS',text:'"Fortune favors the bold."',attr:'— Virgil'},
   {cat:'🧠 GOGGINS',text:'"Stay hard. Callous your mind."',attr:'— David Goggins'},
   {cat:'✝ SCRIPTURE',text:'"He trains my hands for war."',attr:'— Psalm 144:1'},
   {cat:'🎬 CINEMA',text:'"Strength and honor."',attr:'— Gladiator'},
   {cat:'🎖 MILITARY',text:'"Slow is smooth. Smooth is fast."',attr:'— Protocol'},
-  {cat:'⚡ DBZ',text:'"Push through the pain."',attr:'— Vegeta'},
   {cat:'🏛 LEGENDS',text:'"Never, never, never give up."',attr:'— Winston Churchill'}
 ];
 
@@ -1761,7 +1775,7 @@ const FAQS = [
   },
   {
     q: "What are the daily quotes?",
-    a: "A rotating library of motivational quotes from 6 curated categories: Scripture, Cinema, Military, David Goggins, Dragon Ball Z, and Historical Legends. A new quote every day — tap to cycle through. You can enable or disable categories in the Theme tab."
+    a: "A rotating library of motivational quotes from 5 curated categories: Scripture, Cinema, Military, David Goggins, and Historical Legends. A new quote every day — tap to cycle through. You can enable or disable categories in the Theme tab."
   }
 ];
 
