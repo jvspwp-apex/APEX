@@ -7366,24 +7366,31 @@ Return ONLY this JSON:
 }`;
 
   try{
-    const resp = await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'x-api-key':getApiKey(),
-        'anthropic-version':'2023-06-01',
-        'anthropic-dangerous-direct-browser-access':'true'
+    // Call Supabase Edge Function for NLP parsing
+    const userEmail = lraw('apex_access_email', 'anonymous@apextrainer.co');
+    
+    const resp = await fetch('https://qcdodaccujxvhjfvzbzp.supabase.co/functions/v1/parse-goal', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model:'claude-sonnet-4-20250514',
-        max_tokens:600,
-        system: parseSystem,
-        messages:[{role:'user',content:parsePrompt}]
+        goal: raw,
+        userEmail: userEmail
       })
     });
-    if(!resp.ok){const e=await resp.json();throw new Error(e.error?.message||`API error ${resp.status}`);}
+    
+    if(!resp.ok){
+      throw new Error('NLP parse failed');
+    }
+    
     const data = await resp.json();
-    const raw2 = data.content[0].text;
+    
+    if(!data.success){
+      throw new Error('Parse error: ' + (data.error || 'Unknown error'));
+    }
+    
+    const raw2 = data.parsed;
     const clean = raw2.replace(/```json\s*/g,'').replace(/```\s*/g,'').trim();
     const s = clean.indexOf('{'), e2 = clean.lastIndexOf('}');
     if(s===-1)throw new Error('Bad parse response');
@@ -7617,6 +7624,7 @@ async function generatePlan(){
   // Check purchase type and trial status BEFORE consuming AI
   const purchaseType = localStorage.getItem('apex_purchase_type');
   const accessMode = localStorage.getItem('apex_access_mode');
+  const accessType = localStorage.getItem('apex_access_type');
   const apiKey = getApiKey();
   
   // Only 'pass' and 'absolute' users get unlimited AI uses within their subscription period
@@ -7701,34 +7709,37 @@ async function generatePlan(){
   ]).join('\n');
 
   try{
-    // Route selection:
-    // - BYOK (paid_core with own key): direct to Anthropic — free for you
-    // - AI Pass or trial: route through /.netlify/functions/ai-proxy (free Netlify Function)
-    //   The proxy validates the user's status and forwards to Anthropic using YOUR key
-    //   Netlify free tier: 125k function calls/month — more than enough at launch
-    const proxyMode = (getTrialStatus()==='paid_pass') ||
-                      (isTrialActive() && !getApiKey());
-    const apiEndpoint = proxyMode
-      ? '/.netlify/functions/ai-proxy'
-      : 'https://api.anthropic.com/v1/messages';
-    const apiHeaders = proxyMode
-      ? {'Content-Type':'application/json','x-apex-status':getTrialStatus()}
-      : {'Content-Type':'application/json','x-api-key':getApiKey(),
-         'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'};
-
-    const resp=await fetch(apiEndpoint,{
-      method:'POST',
-      headers:apiHeaders,
-      body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
-        max_tokens:8000,
-        system:systemPrompt,
-        messages:[{role:'user',content:userPrompt}]
+    // Get user email for analytics logging
+    const userEmail = lraw('apex_access_email', 'anonymous@apextrainer.co');
+    const goalDescription = parsedIntent.primaryGoal || '';
+    
+    // Call Supabase Edge Function (backend handles API key securely)
+    const resp = await fetch('https://qcdodaccujxvhjfvzbzp.supabase.co/functions/v1/generate-ai-plan', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        goal: goalDescription,
+        userEmail: userEmail,
+        accessType: accessType || accessMode || 'unknown',
+        systemPrompt: systemPrompt,
+        userPrompt: userPrompt
       })
     });
-    if(!resp.ok){const err=await resp.json();throw new Error(err.error?.message||`API error ${resp.status}`);}
+    
+    if(!resp.ok){
+      const err=await resp.json();
+      throw new Error(err.error?.message||`API error ${resp.status}`);
+    }
+    
     const data=await resp.json();
-    const raw=data.content[0].text;
+    
+    if(!data.success){
+      throw new Error(data.error || 'Plan generation failed');
+    }
+    
+    const raw = data.plan;
     let clean=raw.replace(/```json\s*/g,'').replace(/```\s*/g,'').trim();
     const start=clean.indexOf('{');
     const end=clean.lastIndexOf('}');
