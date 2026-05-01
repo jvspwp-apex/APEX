@@ -3549,7 +3549,33 @@ function renderAiUsesBadge(){
 }
 
 // ── API KEY MANAGEMENT ───────────────────────────────────────────────────────
-function getApiKey(){ return lraw('apex_api_key',''); }
+
+// APEX Business Account API Key (loaded from secure backend, never hardcoded)
+// For development: users must provide BYOK or subscribe to APEX AI PASS
+const APEX_BUSINESS_API_KEY = '';
+
+function getApiKey(){
+  // Check if user provided their own key
+  const userKey = lraw('apex_api_key','');
+  if(userKey) return userKey;
+  
+  // Check if user is free/trial (should use business key)
+  const accessMode = lraw('apex_access_mode','');
+  const accessType = lraw('apex_access_type','');
+  
+  if(accessMode === 'family_indefinite' || 
+     accessMode === 'beta_30day' || 
+     accessMode === 'trial'){
+    // Free/trial user - use APEX business key (loaded from backend in production)
+    if(APEX_BUSINESS_API_KEY) return APEX_BUSINESS_API_KEY;
+    // Fallback message if key not available
+    alert('API key not configured. Please contact support or add your own Claude API key.');
+    return '';
+  }
+  
+  // Paid user without key - return empty (they need to add BYOK or upgrade)
+  return '';
+}
 
 function saveKeyAndStart(){
   const k = document.getElementById('key-gate-input').value.trim();
@@ -8053,6 +8079,339 @@ function showPaywallModal(email){
 }
 
 
+// ════════════════════════════════════════════════════════════════════════════
+// TRIAL EXPIRATION & DATA DELETION SYSTEM
+// ════════════════════════════════════════════════════════════════════════════
+
+function checkTrialExpiration(){
+  const accessMode = lraw('apex_access_mode','');
+  const trialStart = parseInt(lraw('apex_trial_start','0'));
+  
+  // Only check for trial users
+  if(accessMode !== 'trial' || !trialStart) return;
+  
+  const trialDays = parseInt(lraw('apex_trial_days','30'));
+  const now = Date.now();
+  const daysPassed = Math.floor((now - trialStart) / (1000*60*60*24));
+  const daysRemaining = trialDays - daysPassed;
+  
+  // Trial still active
+  if(daysRemaining > 0){
+    // Check if they've purchased
+    const hasPurchased = checkIfUserPurchased();
+    if(!hasPurchased){
+      startTrialExpirationNotifications(daysRemaining);
+    }
+    return;
+  }
+  
+  // Trial expired (daysRemaining <= 0)
+  const hasPurchased = checkIfUserPurchased();
+  if(!hasPurchased){
+    handleTrialExpired(daysPassed - trialDays);
+  }
+}
+
+function checkIfUserPurchased(){
+  // Check localStorage for purchase markers
+  const purchased = lraw('apex_purchased','false');
+  const accessType = lraw('apex_access_type','');
+  
+  return purchased === 'true' || 
+         accessType.includes('purchased') || 
+         accessType.includes('paid');
+}
+
+function startTrialExpirationNotifications(daysRemaining){
+  const secondsRemaining = daysRemaining * 24 * 60 * 60;
+  
+  // Schedule notifications at specific intervals
+  const notificationTimes = [
+    secondsRemaining - (2 * 60 * 60),      // Every 2 hours (we'll repeat)
+    secondsRemaining - (60 * 60),          // 1 hour remaining
+    secondsRemaining - (45 * 60),          // 45 minutes
+    secondsRemaining - (30 * 60),          // 30 minutes
+    secondsRemaining - (15 * 60),          // 15 minutes
+    secondsRemaining - (10 * 60),          // 10 minutes
+    secondsRemaining - (5 * 60)            // 5 minutes
+  ];
+  
+  // Set up notification check interval
+  if(!window.trialNotificationInterval){
+    window.trialNotificationInterval = setInterval(function(){
+      checkTrialExpiration();
+    }, 60000); // Check every minute
+  }
+}
+
+function handleTrialExpired(hoursPassed){
+  const hoursUntilDelete = Math.max(0, 24 - hoursPassed);
+  
+  if(hoursUntilDelete > 0){
+    // Show warning modal
+    showTrialExpirationWarning(hoursUntilDelete);
+    
+    // Set deletion timer
+    if(!window.deletionTimer){
+      window.deletionTimer = setTimeout(function(){
+        deleteAllWorkoutData();
+      }, hoursUntilDelete * 60 * 60 * 1000);
+    }
+  } else {
+    // Time to delete
+    deleteAllWorkoutData();
+  }
+}
+
+function showTrialExpirationWarning(hoursRemaining){
+  const allWorkouts = ld('apex_workouts', {});
+  const workoutCount = Object.values(allWorkouts).reduce((sum, plans) => sum + (plans ? plans.length : 0), 0);
+  const exerciseCount = Object.values(allWorkouts).reduce((sum, plans) => {
+    return sum + (plans ? plans.reduce((s, w) => s + (w.exercises ? w.exercises.length : 0), 0) : 0);
+  }, 0);
+  
+  // Get theme font
+  const themeId = lraw('apex_app_theme','cpat');
+  const theme = APP_THEMES.find(t => t.id === themeId) || APP_THEMES[0];
+  const themeFontFamily = theme.font || 'Space Mono';
+  
+  const modal = document.createElement('div');
+  modal.id = 'trial-expiration-modal';
+  modal.style.cssText = `
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 99999;
+    padding: 20px;
+  `;
+  
+  const content = document.createElement('div');
+  content.style.cssText = `
+    background: var(--goal-surf);
+    border: 2px solid var(--goal-mid);
+    border-radius: 12px;
+    padding: 32px;
+    max-width: 600px;
+    width: 100%;
+    font-family: ${themeFontFamily};
+    color: var(--goal-text);
+  `;
+  
+  const hoursStr = Math.floor(hoursRemaining);
+  const minsStr = Math.floor((hoursRemaining % 1) * 60);
+  
+  content.innerHTML = `
+    <div style="font-size:24px;font-weight:700;margin-bottom:12px;letter-spacing:2px;text-transform:uppercase">
+      ⚠️ Trial Expired
+    </div>
+    
+    <div style="font-size:14px;color:var(--goal-muted);margin-bottom:24px;line-height:1.6">
+      Your 30-day trial has ended.
+    </div>
+    
+    <div style="padding:20px;background:var(--goal-bg);border-radius:8px;margin-bottom:24px;font-size:13px;">
+      <div style="font-weight:700;margin-bottom:8px">You've created incredible progress:</div>
+      <div style="color:var(--goal-muted);line-height:1.8">
+        <div>• ${workoutCount} custom workouts</div>
+        <div>• ${exerciseCount} exercises logged</div>
+        <div>• Dedication that speaks volumes</div>
+      </div>
+    </div>
+    
+    <div style="padding:16px;background:rgba(255,100,0,0.1);border-left:4px solid var(--goal-acc);border-radius:4px;margin-bottom:24px;font-size:13px;font-weight:700">
+      Your data will be deleted in ${hoursStr}h ${minsStr}m
+      <div style="font-weight:400;font-size:12px;color:var(--goal-muted);margin-top:8px">
+        Keep pushing. Join APEX.
+      </div>
+    </div>
+    
+    <button onclick="window.location.href='https://jevspwp.gumroad.com/l/apexcore'" style="
+      width:100%;
+      padding:12px;
+      background:var(--goal-acc);
+      color:var(--goal-text);
+      border:none;
+      border-radius:6px;
+      font-weight:700;
+      cursor:pointer;
+      font-size:12px;
+      letter-spacing:1px;
+      text-transform:uppercase;
+      margin-bottom:12px;
+      font-family:${themeFontFamily};
+    ">
+      Join APEX Now
+    </button>
+    
+    <button onclick="window.location.href='https://jevspwp.gumroad.com/l/kgpcu'" style="
+      width:100%;
+      padding:12px;
+      background:transparent;
+      color:var(--goal-acc);
+      border:2px solid var(--goal-acc);
+      border-radius:6px;
+      font-weight:700;
+      cursor:pointer;
+      font-size:12px;
+      letter-spacing:1px;
+      text-transform:uppercase;
+      font-family:${themeFontFamily};
+    ">
+      Or: Absolute APEX ($40)
+    </button>
+  `;
+  
+  modal.appendChild(content);
+  document.body.appendChild(modal);
+  
+  // Send browser notification
+  if(Notification && Notification.permission === 'granted'){
+    new Notification('APEX Trial Expired', {
+      body: `Your data will be deleted in ${hoursStr}h ${minsStr}m. Join APEX to save your progress.`,
+      icon: '/favicon.ico'
+    });
+  }
+}
+
+function deleteAllWorkoutData(){
+  const allWorkouts = ld('apex_workouts', {});
+  const totalWorkouts = Object.values(allWorkouts).reduce((sum, plans) => sum + (plans ? plans.length : 0), 0);
+  
+  // Store deletion record for recovery option
+  sraw('apex_deleted_data', JSON.stringify({
+    deletedAt: Date.now(),
+    workoutCount: totalWorkouts,
+    recoveryDeadline: Date.now() + (7 * 24 * 60 * 60 * 1000) // 7-day window
+  }));
+  
+  // Clear all custom data
+  localStorage.removeItem('apex_workouts');
+  localStorage.removeItem('apex_custom_goals');
+  localStorage.removeItem('apex_plan_prompts');
+  localStorage.removeItem('apex_trial_start');
+  
+  // Reset to base plans
+  resetToBasePlans();
+  
+  // Show deletion message
+  showDataDeletedMessage(totalWorkouts);
+}
+
+function resetToBasePlans(){
+  const basePlans = [
+    { id: 'forge', label: 'FORGE', badge: 'FORG', isBuiltIn: true },
+    { id: 'train_for_peaks', label: 'TRAIN FOR PEAKS', badge: 'TRNP', isBuiltIn: true },
+    { id: 'firststep', label: 'FIRST STEP', badge: 'FRST', isBuiltIn: true }
+  ];
+  
+  sraw('apex_generated_goals', JSON.stringify(basePlans));
+  localStorage.removeItem('apex_active_goal');
+  localStorage.removeItem('apex_goal_order');
+}
+
+function showDataDeletedMessage(workoutCount){
+  const themeId = lraw('apex_app_theme','cpat');
+  const theme = APP_THEMES.find(t => t.id === themeId) || APP_THEMES[0];
+  const themeFontFamily = theme.font || 'Space Mono';
+  
+  const modal = document.createElement('div');
+  modal.id = 'data-deleted-modal';
+  modal.style.cssText = `
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 99999;
+    padding: 20px;
+  `;
+  
+  const content = document.createElement('div');
+  content.style.cssText = `
+    background: var(--goal-surf);
+    border: 2px solid var(--goal-mid);
+    border-radius: 12px;
+    padding: 32px;
+    max-width: 600px;
+    width: 100%;
+    font-family: ${themeFontFamily};
+    color: var(--goal-text);
+    text-align: center;
+  `;
+  
+  content.innerHTML = `
+    <div style="font-size:24px;font-weight:700;margin-bottom:12px;letter-spacing:2px;text-transform:uppercase">
+      📊 Data Deleted
+    </div>
+    
+    <div style="padding:20px;background:var(--goal-bg);border-radius:8px;margin-bottom:24px;font-size:13px;">
+      <div style="font-weight:700;margin-bottom:8px;color:var(--goal-acc)">We deleted your trial data:</div>
+      <div style="color:var(--goal-muted);line-height:1.8;font-size:12px">
+        <div>• ${workoutCount} workouts removed</div>
+        <div>• Custom plans reset</div>
+        <div>• Progress data cleared</div>
+      </div>
+    </div>
+    
+    <div style="font-size:13px;color:var(--goal-muted);margin-bottom:24px;line-height:1.6">
+      You now have access to our 3 foundation plans:<br>
+      <strong>FORGE</strong> • <strong>TRAIN FOR PEAKS</strong> • <strong>FIRST STEP</strong>
+    </div>
+    
+    <div style="padding:16px;background:rgba(255,100,0,0.1);border-radius:8px;margin-bottom:24px;font-size:12px;font-weight:700">
+      Want to recover your data?
+      <div style="font-weight:400;margin-top:8px;color:var(--goal-muted)">
+        You have 7 days to purchase and restore your deleted workouts.
+      </div>
+    </div>
+    
+    <button onclick="window.location.href='https://jevspwp.gumroad.com/l/apexcore'" style="
+      width:100%;
+      padding:12px;
+      background:var(--goal-acc);
+      color:var(--goal-text);
+      border:none;
+      border-radius:6px;
+      font-weight:700;
+      cursor:pointer;
+      font-size:12px;
+      letter-spacing:1px;
+      text-transform:uppercase;
+      margin-bottom:12px;
+      font-family:${themeFontFamily};
+    ">
+      Recover Data — Join APEX Now
+    </button>
+    
+    <button onclick="document.getElementById('data-deleted-modal').remove()" style="
+      width:100%;
+      padding:12px;
+      background:transparent;
+      color:var(--goal-muted);
+      border:1px solid var(--goal-mid);
+      border-radius:6px;
+      font-weight:700;
+      cursor:pointer;
+      font-size:12px;
+      letter-spacing:1px;
+      text-transform:uppercase;
+      font-family:${themeFontFamily};
+    ">
+      Continue with Free Plans
+    </button>
+  `;
+  
+  modal.appendChild(content);
+  document.body.appendChild(modal);
+  
+  // Reload to show base plans
+  setTimeout(() => location.reload(), 2000);
+}
+
 function init(){
   if(!checkTrialStatus()) return; // Trial gate check
   // ── Onboarding state (used during setup flow) ──
@@ -8174,6 +8533,7 @@ function init(){
   }, 1800);
 }
 init();
+checkTrialExpiration();
 
 
 // ── JOURNAL SYSTEM ────────────────────────────────────────────────────────────
