@@ -17,7 +17,21 @@
 }
 html{scroll-behavior:smooth}
 body{font-family:'Space Mono',monospace;background:var(--bg);color:var(--text);
-  min-height:100vh;overflow-x:hidden;transition:background .6s var(--ease)}
+  min-height:100vh;overflow-x:hidden;transition:background .6s var(--ease);position:relative}
+
+@keyframes sunShadow{
+  0%{box-shadow:inset 300px -200px 400px rgba(255,100,0,0.18)}
+  25%{box-shadow:inset 200px -150px 450px rgba(255,140,0,0.25)}
+  50%{box-shadow:inset 100px -100px 500px rgba(255,60,0,0.30)}
+  75%{box-shadow:inset 0px -50px 450px rgba(255,90,0,0.25)}
+  100%{box-shadow:inset -300px 0px 400px rgba(255,100,0,0.18)}
+}
+
+/* Shadow effect only active on SUNRISE theme */
+body[data-theme="sunrise"]::before{
+  animation:sunShadow 20s ease-in-out infinite
+}
+
 body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
   background:
     radial-gradient(ellipse 120% 60% at 10% 15%,rgba(212,82,10,.10) 0%,transparent 55%),
@@ -95,6 +109,7 @@ body[data-font="classic"]{--font-display:'Bebas Neue',cursive !important}
 /* ── HERO ────────────────────────────────────────── */
 .hero{min-height:100vh;padding:140px 28px 80px;position:relative;overflow:hidden;
   display:flex;align-items:center;justify-content:center}
+@media(max-width:640px){.hero{padding:100px 20px 60px}}
 .hero-bg{position:absolute;inset:0;z-index:0;pointer-events:none;
   background:
     radial-gradient(circle at 20% 30%,rgba(212,82,10,.15),transparent 50%),
@@ -118,9 +133,10 @@ body[data-font="classic"]{--font-display:'Bebas Neue',cursive !important}
   animation:fadeUp .6s var(--ease) both}
 .hero-eyebrow .live{width:6px;height:6px;border-radius:50%;background:#4ade80;
   box-shadow:0 0 8px #4ade80;animation:pulse 1.5s infinite}
-.hero h1{font-family:var(--font-display);font-size:clamp(56px,9vw,86.6px);letter-spacing:4px;
+.hero h1{font-family:var(--font-display);font-size:clamp(48px,8vw,86.6px);letter-spacing:4px;
   line-height:.92;margin-bottom:20px;color:var(--text);opacity:1;
-  animation:fadeUp .7s var(--ease) .1s both}
+  animation:fadeUp .7s var(--ease) .1s both;word-wrap:break-word;overflow-wrap:break-word}
+@media(max-width:640px){.hero h1{letter-spacing:2px;font-size:clamp(40px,7vw,56px)}}
 .hero h1 .accent{color:var(--hi);position:relative;display:inline-block;
   text-shadow:0 0 40px rgba(244,135,75,.35)}
 /* Bolder orange accent across all sections */
@@ -368,9 +384,11 @@ section{padding:100px 28px;position:relative}
 
 .theme-preview-pane{display:flex;justify-content:center;align-items:center}
 /* ── SAMSUNG Z FOLD ── */
-.zfold{position:relative;width:520px;height:386px;flex-shrink:0;
+.zfold{position:relative;width:100%;max-width:520px;height:auto;aspect-ratio:520/386;flex-shrink:0;margin:0 auto;
   filter:drop-shadow(0 32px 64px rgba(0,0,0,.7));
   animation:zfoldOpen 1.4s cubic-bezier(0.34,1.2,0.64,1) forwards}
+@media(max-width:900px){.zfold{max-width:100%;width:100%;padding:0}}
+@media(max-width:640px){.zfold{max-width:280px;width:280px;height:auto;aspect-ratio:520/386;padding:0 auto}}
 @keyframes zfoldOpen{
   0%{transform:perspective(900px) rotateY(-60deg) scale(.85);opacity:0}
   40%{opacity:1}
@@ -536,11 +554,13 @@ section{padding:100px 28px;position:relative}
 .proof-lbl{font-size:10px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-top:4px}
 .proof-div{width:1px;height:40px;background:rgba(245,238,216,.1)}
 @media(max-width:600px){.proof-div{display:none}}
-.proof-quote{max-width:520px;text-align:center;padding:20px 24px;
+.proof-quote{max-width:700px;text-align:center;padding:40px 40px;
   background:rgba(245,238,216,.03);border:1px solid rgba(245,238,216,.1);
   border-radius:12px;border-left:3px solid var(--acc)}
-.proof-quote-text{font-size:13px;font-style:italic;color:var(--text);line-height:1.65;margin-bottom:8px}
-.proof-quote-attr{font-size:10px;color:var(--muted);letter-spacing:.5px}
+@media(max-width:640px){.proof-quote{padding:24px 20px;max-width:100%;word-wrap:break-word;overflow-wrap:break-word}}
+.proof-quote-text{font-size:16px;font-style:italic;color:var(--text);line-height:1.7;margin-bottom:12px}
+@media(max-width:640px){.proof-quote-text{font-size:14px;word-wrap:break-word}}
+.proof-quote-attr{font-size:12px;color:var(--muted);letter-spacing:.5px}
 
 /* ── FOOTER ──────────────────────────────────────── */
 footer{border-top:1px solid rgba(245,238,216,.08);padding:40px 28px;
@@ -576,18 +596,21 @@ footer .f-logo{font-family:var(--font-display);font-size:20px;letter-spacing:4px
 .prompt-chip:hover{background:var(--acc);border-color:var(--acc);color:var(--text)}
 
 .demo-card{background:#0a0a0a;border:1.5px solid rgba(245,238,216,.12);border-radius:16px;
-  padding:24px;position:relative}
+  padding:24px;position:relative;word-wrap:break-word;overflow-wrap:break-word}
+@media(max-width:640px){.demo-card{padding:16px;border-radius:12px}}
 .demo-card .header{display:flex;align-items:center;gap:10px;padding-bottom:14px;
-  border-bottom:1px solid rgba(245,238,216,.08);margin-bottom:14px}
+  border-bottom:1px solid rgba(245,238,216,.08);margin-bottom:14px;flex-wrap:wrap}
 .demo-card .dot-row{display:flex;gap:6px}
 .demo-card .hd-dot{width:8px;height:8px;border-radius:50%;background:rgba(245,238,216,.2)}
 .demo-card .hd-title{font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase}
 .demo-prompt{background:rgba(245,238,216,.04);border:1px solid rgba(245,238,216,.1);
   border-radius:8px;padding:12px 14px;font-size:12px;color:var(--text);margin-bottom:16px;
-  min-height:48px;line-height:1.5}
+  min-height:48px;line-height:1.5;word-wrap:break-word;overflow-wrap:break-word}
+@media(max-width:640px){.demo-prompt{font-size:11px;padding:10px 12px}}
 .demo-response{background:rgba(212,82,10,.08);border:1px solid rgba(212,82,10,.25);
   border-left:3px solid var(--acc);border-radius:6px;padding:12px 14px;font-size:11px;
-  line-height:1.7;color:var(--text)}
+  line-height:1.7;color:var(--text);word-wrap:break-word;overflow-wrap:break-word}
+@media(max-width:640px){.demo-response{font-size:10px;padding:10px 12px}}
 .demo-response .lbl{font-size:8px;letter-spacing:2px;text-transform:uppercase;
   color:var(--acc);font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:6px}
 .typing-dot{width:4px;height:4px;border-radius:50%;background:var(--acc);
@@ -684,9 +707,10 @@ body[data-theme="aurora"]::before{background:
     <button class="nav-link" onclick="document.getElementById('themes').scrollIntoView({behavior:'smooth'})">Themes</button>
     <button class="nav-link" onclick="document.getElementById('features').scrollIntoView({behavior:'smooth'})">Features</button>
     <button class="nav-link" onclick="document.getElementById('demo').scrollIntoView({behavior:'smooth'})">AI Demo</button>
+    <button class="nav-link" onclick="showInWorksModal()" style="color:var(--acc)">In the Works</button>
     <button class="nav-link" onclick="document.getElementById('pricing').scrollIntoView({behavior:'smooth'})">Pricing</button>
     <button class="nav-link" onclick="document.getElementById('faq').scrollIntoView({behavior:'smooth'})">FAQ</button>
-    <button class="nav-cta" onclick="showTrialGateModal()">Get APEX</button>
+    <button class="nav-cta" onclick="showLaunchModal()">Get APEX</button>
   </div>
 </nav>
 
@@ -1017,7 +1041,7 @@ body[data-theme="aurora"]::before{background:
         <li><div class="pf-dot">✓</div>PWA — works offline, installs to home screen</li>
         <li><div class="pf-dot">✓</div>No account. No ads. Your data stays on your device.</li>
       </ul>
-      <button class="price-cta" onclick="showTrialGateModal()">GET APEX — $15</button>
+      <button class="price-cta" onclick="window.open('https://jevspwp.gumroad.com/l/apexcore', '_blank')">GET APEX — $15</button>
     </div>
     <div class="price-card featured reveal reveal-delay-2">
       <div class="price-badge">Complete Bundle</div>
@@ -1033,7 +1057,7 @@ body[data-theme="aurora"]::before{background:
         <li><div class="pf-dot">✓</div>Save $5 off retail price ($45 value)</li>
         <li><div class="pf-dot">✓</div>After year 1: Core stays forever, renew AI at $30/yr</li>
       </ul>
-      <button class="price-cta" onclick="showTrialGateModal()">GET ABSOLUTE — $40</button>
+      <button class="price-cta" onclick="window.open('https://jevspwp.gumroad.com/l/kgpcu', '_blank')">GET ABSOLUTE — $40</button>
     </div>
     <div class="price-card reveal reveal-delay-3">
       <div class="price-badge soft">AI Pass</div>
@@ -1049,13 +1073,87 @@ body[data-theme="aurora"]::before{background:
         <li><div class="pf-dot">✓</div>Progressive programming — periodized weeks, volume progression</li>
         <li><div class="pf-dot">✓</div>Private by design — key stored only on your device</li>
       </ul>
-      <button class="price-cta" onclick="showTrialGateModal()">START WITH AI — $4.99/MO</button>
+      <button class="price-cta" onclick="window.open('https://jevspwp.gumroad.com/l/apexpass', '_blank')">START WITH AI — $4.99/MO</button>
     </div>
   </div>
   <p class="price-note reveal">Already have a Claude API key? <a href="#">Use BYOK</a> and skip the subscription entirely. Core features never require AI.</p>
 </section>
 
-<!-- ── FAQ ── -->
+<!-- ── FOUNDER STORY ── -->
+<section style="padding:100px 28px;background:transparent" class="reveal">
+  <div style="max-width:900px;margin:0 auto">
+    <div class="sec-head" style="margin-bottom:48px;text-align:center">
+      <span class="sec-eyebrow">How this started</span>
+      <h1 class="sec-title">2015. Hit by a car.</h1>
+    </div>
+    <div style="font-size:18px;line-height:1.8;color:#333;max-width:900px;padding:40px;background:rgba(255,255,255,0.5);border-radius:8px;border:1px solid rgba(217,101,43,0.2)">
+      <p style="margin-bottom:20px"><strong>The Damage:</strong> Pinched lower back nerve. Zero cartilage in both knees. Torn ACL. Torn meniscus twice. Multiple head concussions. I was broken.</p>
+      
+      <p style="margin-bottom:20px"><strong>The Overwhelm:</strong> Physical therapy felt endless. Doctors couldn't promise I'd ever cycle, hike, or lift seriously again. I felt completely unprepared and overwhelmed. Cycling, hiking, lifting—these weren't hobbies. They were life. The thought of losing them was unbearable.</p>
+      
+      <p style="margin-bottom:20px"><strong>The Drive:</strong> Zero desire to stop. I had to figure out how to keep moving forward, despite the damage. Not recklessly—intelligently. I needed a training approach built from real research, real periodization, real adaptation.</p>
+      
+      <p style="margin-bottom:20px"><strong>The Research:</strong> Years of intensive study. Andrew Huberman's work on neuroplasticity and recovery. Men's Health protocols on periodization and strength. Muscle Magazine on hypertrophy and adaptation. Muscle physiology. Supplement science. Then months of personal testing—iteration on myself. What actually works when you're broken but refusing to quit.</p>
+      
+      <p style="margin-bottom:20px"><strong>The Solution:</strong> I built APEX. Not because I wanted to be a coach. Because I wanted something better to exist for people like me—unprepared, overwhelmed, but absolutely determined to keep moving.</p>
+      
+      <p style="margin-bottom:30px;font-weight:600;color:#1F3A34;font-size:18px">An AI coach trained from my research, my testing, my experience. One you own forever. No subscription trap. No data harvesting. Just a tool that adapts to your broken places and helps you move forward anyway.</p>
+      
+      <div style="padding:20px;background:rgba(217,101,43,0.08);border-left:4px solid #D9652B;border-radius:4px;margin-top:30px">
+        <p style="margin:0;font-size:14px;color:#333;line-height:1.7">Built for people in the same situation—unprepared, overwhelmed, but determined. For family. For friends. For anyone serious about getting better. For cyclists who thought they'd never ride again. For lifters rehabbing a torn shoulder. For hikers building back from injury. For CPAT candidates refusing to fail. For military candidates determined to qualify. For anyone refusing to quit.</p>
+      </div>
+      
+      <div style="margin-top:30px;padding:15px;background:rgba(0,0,0,0.03);border-radius:4px;text-align:center;font-size:13px;color:#555;font-style:italic">
+        I appreciate any and all feedback to improve this project. Any expertise welcomed to share your experience. Thank you all for your support.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── SECTORS / USE CASES ── -->
+<section style="padding:100px 28px" class="reveal">
+  <div style="max-width:1200px;margin:0 auto">
+    <div class="sec-head" style="margin-bottom:60px;text-align:center">
+      <span class="sec-eyebrow">Four pathways to rise</span>
+      <h1 class="sec-title">Train For Your Mission.</h1>
+      <p style="font-size:16px;color:#666;margin-top:20px;max-width:800px;margin-left:auto;margin-right:auto">Whether you're prepping for a firefighter exam, military service, competing at your peak, or recovering from injury—APEX has a training protocol built for your exact goal.</p>
+    </div>
+    
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:30px">
+      <!-- CPAT -->
+      <div style="padding:30px;background:#f9f9f9;border-radius:8px;border-left:4px solid #D9652B">
+        <h3 style="font-family:'Bebas Neue',sans-serif;font-size:18px;text-transform:uppercase;letter-spacing:1px;color:#1F3A34;margin-bottom:12px">CPAT</h3>
+        <p style="font-size:14px;color:#666;line-height:1.6">Different departments, different standards. CPAT, ACFT, Sheriff exams. Each requires its own periodization. APEX knows them all.</p>
+      </div>
+      
+      <!-- MILITARY -->
+      <div style="padding:30px;background:#f9f9f9;border-radius:8px;border-left:4px solid #D9652B">
+        <h3 style="font-family:'Bebas Neue',sans-serif;font-size:18px;text-transform:uppercase;letter-spacing:1px;color:#1F3A34;margin-bottom:12px">MILITARY</h3>
+        <p style="font-size:14px;color:#666;line-height:1.6">Army PT Test 2026, Ranger APFT, Marine standards, Airforce PJ minimums. Train to the exact standards that define your branch.</p>
+      </div>
+      
+      <!-- BEGINNER ATHLETE -->
+      <div style="padding:30px;background:#f9f9f9;border-radius:8px;border-left:4px solid #D9652B">
+        <h3 style="font-family:'Bebas Neue',sans-serif;font-size:18px;text-transform:uppercase;letter-spacing:1px;color:#1F3A34;margin-bottom:12px">BEGINNER</h3>
+        <p style="font-size:14px;color:#666;line-height:1.6">Just starting your fitness journey. Best prepared and most encouraging environment to grow. No judgment, just progression.</p>
+      </div>
+      
+      <!-- COMPETITIVE ATHLETE -->
+      <div style="padding:30px;background:#f9f9f9;border-radius:8px;border-left:4px solid #D9652B">
+        <h3 style="font-family:'Bebas Neue',sans-serif;font-size:18px;text-transform:uppercase;letter-spacing:1px;color:#1F3A34;margin-bottom:12px">ATHLETE</h3>
+        <p style="font-size:14px;color:#666;line-height:1.6">Strength, endurance, sport-specific. Own your data. Choose your vibe. Train in an aesthetic that powers you.</p>
+      </div>
+      
+      <!-- RECOVERY -->
+      <div style="padding:30px;background:#f9f9f9;border-radius:8px;border-left:4px solid #D9652B">
+        <h3 style="font-family:'Bebas Neue',sans-serif;font-size:18px;text-transform:uppercase;letter-spacing:1px;color:#1F3A34;margin-bottom:12px">RECOVERY</h3>
+        <p style="font-size:14px;color:#666;line-height:1.6">Training around injury. Modified movements. Same strength gains. By the time you're cleared, you'll be stronger than before.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FEATURES / PROOF ── -->
 <section id="faq" style="padding:100px 28px">
   <div style="max-width:800px;margin:0 auto">
     <div class="sec-head reveal" style="margin-bottom:48px">
@@ -1076,7 +1174,7 @@ body[data-theme="aurora"]::before{background:
     <h2>STOP PLANNING.<br><span class="underline">START TRAINING.</span></h2>
     <p>APEX is free to try for 1 month. Runs in your browser. Installs to your phone. Bring your own Anthropic API key and you're training in 60 seconds.</p>
     <div class="hero-cta-row" style="justify-content:center">
-      <button class="btn-primary" onclick="showTrialGateModal()">
+      <button class="btn-primary" onclick="showLaunchModal()">
         LAUNCH APEX <span>→</span>
       </button>
 
@@ -1835,27 +1933,52 @@ document.addEventListener('DOMContentLoaded', ()=>{
      ════════════════════════════════════════════════════════════════════════════ -->
 
 <div id="trial-gate-modal" style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:none;align-items:center;justify-content:center;padding:20px">
-  <div style="background:var(--surf);border:2px solid var(--mid);border-radius:12px;padding:32px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3)">
-    <div style="font-family:var(--font-display);font-size:24px;letter-spacing:2px;color:var(--text);margin-bottom:12px">TRIAL ACCESS</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:24px;line-height:1.6">Enter your email to start your free 7-day trial. Test the full app, all features unlocked.</div>
+  <div style="background:var(--surf);border:2px solid var(--mid);border-radius:12px;padding:32px;max-width:500px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+    <div style="font-family:var(--font-display);font-size:24px;letter-spacing:2px;color:var(--text);margin-bottom:12px">LAUNCH APEX</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:24px;line-height:1.6">Choose how you want to get started:</div>
     
-    <input id="trial-email-input" type="email" placeholder="your.email@gmail.com" style="width:100%;padding:12px;background:var(--bg);border:1.5px solid var(--mid);border-radius:6px;color:var(--text);font-family:var(--font-body);font-size:12px;margin-bottom:16px;outline:none" onkeypress="if(event.key==='Enter') startTrial()">
+    <!-- OPTION 1: Free Trial -->
+    <div style="margin-bottom:16px;padding:16px;background:rgba(245,238,216,.05);border:1px solid rgba(245,238,216,.1);border-radius:8px">
+      <div style="font-weight:600;color:var(--text);margin-bottom:8px;font-size:13px">1 MONTH FREE TRIAL</div>
+      <p style="font-size:11px;color:var(--muted);margin-bottom:12px">Full access to all features. No credit card required.</p>
+      <input id="trial-email-input" type="email" placeholder="your.email@gmail.com" style="width:100%;padding:10px;background:var(--bg);border:1.5px solid var(--mid);border-radius:6px;color:var(--text);font-family:var(--font-body);font-size:11px;margin-bottom:10px;outline:none" onkeypress="if(event.key==='Enter') startTrial()">
+      <button onclick="startTrial()" style="width:100%;padding:10px;background:var(--goal-acc);color:var(--text);border:none;border-radius:6px;font-weight:600;cursor:pointer;font-size:11px;letter-spacing:1px;text-transform:uppercase;transition:all .2s">
+        Start Free Trial
+      </button>
+    </div>
     
-    <button onclick="startTrial()" style="width:100%;padding:12px;background:var(--goal-acc);color:var(--text);border:none;border-radius:6px;font-weight:600;cursor:pointer;font-size:12px;letter-spacing:1px;text-transform:uppercase;margin-bottom:12px;transition:all .2s">
-      START 7-DAY TRIAL
-    </button>
+    <!-- OPTION 2: Already Purchased -->
+    <div style="margin-bottom:16px;padding:16px;background:rgba(245,238,216,.05);border:1px solid rgba(245,238,216,.1);border-radius:8px">
+      <div style="font-weight:600;color:var(--text);margin-bottom:8px;font-size:13px">ALREADY PURCHASED?</div>
+      <p style="font-size:11px;color:var(--muted);margin-bottom:12px">Lost your download link? Enter your email to retrieve it.</p>
+      <input id="purchase-email-input" type="email" placeholder="your.email@gmail.com" style="width:100%;padding:10px;background:var(--bg);border:1.5px solid var(--mid);border-radius:6px;color:var(--text);font-family:var(--font-body);font-size:11px;margin-bottom:10px;outline:none" onkeypress="if(event.key==='Enter') verifyPurchase()">
+      <button onclick="verifyPurchase()" style="width:100%;padding:10px;background:var(--goal-acc);color:var(--text);border:none;border-radius:6px;font-weight:600;cursor:pointer;font-size:11px;letter-spacing:1px;text-transform:uppercase;transition:all .2s">
+        Verify & Get Link
+      </button>
+    </div>
+    
+    <!-- OPTION 3: Join APEX -->
+    <div style="margin-bottom:16px;padding:16px;background:rgba(245,238,216,.05);border:1px solid rgba(245,238,216,.1);border-radius:8px">
+      <div style="font-weight:600;color:var(--text);margin-bottom:8px;font-size:13px">JOIN APEX</div>
+      <p style="font-size:11px;color:var(--muted);margin-bottom:12px">Choose your plan and purchase on Gumroad.</p>
+      <button onclick="closeTrialGate(); document.getElementById('pricing').scrollIntoView({behavior:'smooth'})" style="width:100%;padding:10px;background:var(--goal-acc);color:var(--text);border:none;border-radius:6px;font-weight:600;cursor:pointer;font-size:11px;letter-spacing:1px;text-transform:uppercase;transition:all .2s">
+        View Plans
+      </button>
+    </div>
     
     <button onclick="closeTrialGate()" style="width:100%;padding:10px;background:transparent;border:1px solid var(--muted);border-radius:6px;color:var(--muted);font-size:11px;cursor:pointer;letter-spacing:.5px;text-transform:uppercase">
-      CANCEL
+      CLOSE
     </button>
   </div>
 </div>
 
 <script>
 // ════════════════════════════════════════════════════════════════════════════
-// APPROVED TESTER EMAIL LIST
+// APPROVED TESTER EMAIL LISTS
 // ════════════════════════════════════════════════════════════════════════════
-const APPROVED_TESTERS = [
+
+// Family members: Indefinite free access (no expiration)
+const FAMILY_ACCESS = [
   'lv459172@gmail.com',
   '01j.valencia@gmail.com',
   'avalencia@paznaz.org',
@@ -1864,13 +1987,33 @@ const APPROVED_TESTERS = [
   'darkmagykx@gmail.com'
 ];
 
-function showTrialGateModal(){
+// External beta testers: 30-day trial (then upgrade/decision)
+const BETA_TESTERS = [
+  'david.velasco27@yahoo.com'
+];
+
+function showLaunchModal(){
   document.getElementById('trial-gate-modal').style.display = 'flex';
   document.getElementById('trial-email-input').focus();
 }
 
 function closeTrialGate(){
   document.getElementById('trial-gate-modal').style.display = 'none';
+}
+
+function verifyPurchase(){
+  const email = document.getElementById('purchase-email-input').value.trim().toLowerCase();
+  if(!email || !email.includes('@')){
+    alert('Please enter a valid email');
+    return;
+  }
+  alert('Purchase verification email has been sent to ' + email + '. Check your inbox for your download link.');
+  closeTrialGate();
+}
+
+function useFreePlans(){
+  localStorage.setItem('apex_access_mode', 'free');
+  window.location.href = '/APEX.html';
 }
 
 function startTrial(){
@@ -1881,23 +2024,41 @@ function startTrial(){
     return;
   }
   
-  const isApproved = APPROVED_TESTERS.includes(email);
+  const isFamily = FAMILY_ACCESS.includes(email);
+  const isBetaTester = BETA_TESTERS.includes(email);
   
-  if(isApproved){
-    // APPROVED TESTER - FREE ROAM MODE
-    localStorage.setItem('apex_approved_tester', 'true');
-    localStorage.setItem('apex_tester_email', email);
-    localStorage.setItem('apex_access_mode', 'playground');
+  if(isFamily){
+    // FAMILY MEMBER - INDEFINITE FREE ACCESS
+    localStorage.setItem('apex_family_access', 'true');
+    localStorage.setItem('apex_access_email', email);
+    localStorage.setItem('apex_access_mode', 'family_indefinite');
+    localStorage.setItem('apex_access_type', 'Family (Forever Free)');
+    closeTrialGate();
+    alert('Welcome! You have indefinite access to APEX. Enjoy!');
+    window.location.href = '/APEX.html';
+    
+  } else if(isBetaTester){
+    // EXTERNAL BETA TESTER - 30 DAY TRIAL
+    localStorage.setItem('apex_beta_tester', 'true');
+    localStorage.setItem('apex_access_email', email);
+    localStorage.setItem('apex_trial_start', Date.now().toString());
+    localStorage.setItem('apex_trial_days', '30');
+    localStorage.setItem('apex_access_mode', 'beta_30day');
+    localStorage.setItem('apex_access_type', 'Beta Tester (30-Day Trial)');
+    closeTrialGate();
+    alert('Welcome to APEX beta! You have 30 days of full access. Your feedback shapes what APEX becomes.');
+    window.location.href = '/APEX.html';
+    
   } else {
-    // GENERAL USER - 7 DAY TRIAL
+    // GENERAL USER - 7 DAY TRIAL (or email verification for purchase)
     localStorage.setItem('apex_trial_email', email);
     localStorage.setItem('apex_trial_start', Date.now().toString());
     localStorage.setItem('apex_trial_days', '7');
     localStorage.setItem('apex_access_mode', 'trial');
+    closeTrialGate();
+    alert('Check your email for trial access instructions!');
+    window.location.href = '/APEX.html';
   }
-  
-  // REDIRECT TO APP
-  window.location.href = '/APEX.html';
 }
 
 // Allow Enter key to submit
@@ -1910,4 +2071,77 @@ document.addEventListener('keypress', function(e){
 
 
 </body>
+
+<!-- In the Works Modal -->
+<div id="in-works-modal" style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:none;align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--surf);border:2px solid var(--mid);border-radius:12px;padding:32px;max-width:600px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);max-height:80vh;overflow-y:auto">
+    <div style="font-family:var(--font-display);font-size:28px;letter-spacing:2px;color:var(--text);margin-bottom:12px">🚀 IN THE WORKS</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:30px;line-height:1.8">
+      The APEX community is growing. Here's what's coming next:
+    </div>
+    
+    <!-- Phase 2 -->
+    <div style="margin-bottom:30px;padding:20px;background:rgba(245,238,216,.05);border-left:4px solid var(--acc);border-radius:8px">
+      <div style="font-weight:700;color:var(--text);margin-bottom:8px;font-size:14px;text-transform:uppercase;letter-spacing:1px">📋 PHASE 2: SHAREABLE WORKOUTS</div>
+      <div style="font-size:12px;color:var(--text-light);line-height:1.7;margin-bottom:15px">
+        <strong>Custom Workout Builder:</strong> Create blank weekly templates. Add exercises day-by-day. AI Coach assigns tips and resources for your exact workout split.
+      </div>
+      <div style="font-size:12px;color:var(--text-light);line-height:1.7;margin-bottom:15px">
+        <strong>Share Your Plans:</strong> Generate a shareable link. Your friend clicks it, enters their email, and instantly joins a 1-month trial with your plan pre-loaded (read-only). When they're ready to customize, they duplicate it—creating their own immediately editable copy. Your original plan stays pristine. Their customized version shows "Based on [Your Name]'s plan."
+      </div>
+      <div style="font-size:12px;color:var(--text-light);line-height:1.7;margin-bottom:15px">
+        <strong>Viral Loop:</strong> Every share counts. Refer friends, unlock exclusive free merch drops.
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:15px;padding-top:15px;border-top:1px solid rgba(217,101,43,.2)">
+        <strong>Timeline:</strong> Launching Q3 2026
+      </div>
+    </div>
+    
+    <!-- What's Included -->
+    <div style="margin-bottom:30px;padding:20px;background:rgba(245,238,216,.05);border-left:4px solid var(--acc);border-radius:8px">
+      <div style="font-weight:700;color:var(--text);margin-bottom:15px;font-size:13px;text-transform:uppercase;letter-spacing:1px">✓ Phase 2 Includes:</div>
+      <div style="font-size:12px;color:var(--text-light);line-height:1.9">
+        <div style="margin-bottom:8px">• <strong>Blank Workout Template</strong> — Create custom weekly splits from scratch</div>
+        <div style="margin-bottom:8px">• <strong>AI-Powered Tips</strong> — Coach APEX analyzes your exercises and provides form cues, progression strategies, and recovery advice</div>
+        <div style="margin-bottom:8px">• <strong>Shareable Links</strong> — Generate unique URLs for each workout plan</div>
+        <div style="margin-bottom:8px">• <strong>Public Nicknames</strong> — Create a screen name (keeps your real identity private, perfect for military/government)</div>
+        <div style="margin-bottom:8px">• <strong>Read-Only Shared Plans</strong> — Friends receive your plan exactly as designed (locked from editing)</div>
+        <div style="margin-bottom:8px">• <strong>Duplicate & Customize</strong> — Friends can duplicate your plan to create their own immediately editable copy</div>
+        <div style="margin-bottom:8px">• <strong>Attribution System</strong> — Duplicated plans show "Based on [Creator]'s plan" maintaining credit</div>
+        <div style="margin-bottom:8px">• <strong>1-Click Friend Onboarding</strong> — Friends click link, enter email, 1-month trial auto-starts with your plan</div>
+        <div style="margin-bottom:8px">• <strong>Free Merch Drops</strong> — Earn APEX apparel for every 5 friends who join via your shares</div>
+        <div style="margin-bottom:8px">• <strong>Share Analytics</strong> — See who opened your links, how many converted to trials</div>
+        <div style="margin-bottom:8px">• <strong>3-Month Share Window</strong> — Links stay active for 90 days after creation</div>
+      </div>
+    </div>
+    
+    <!-- Future Phases -->
+    <div style="margin-bottom:20px;padding:20px;background:rgba(245,238,216,.03);border:1px solid rgba(245,238,216,.1);border-radius:8px">
+      <div style="font-weight:700;color:var(--text);margin-bottom:12px;font-size:13px;text-transform:uppercase;letter-spacing:1px">🔮 Beyond Phase 2:</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.8">
+        <div style="margin-bottom:8px">Community Leaderboard • Video Form Library • Group Challenges • Referral Bonuses • APEX Merch Store • Athlete Profiles</div>
+      </div>
+    </div>
+    
+    <button onclick="closeInWorksModal()" style="width:100%;padding:12px;background:var(--acc);color:var(--text);border:none;border-radius:6px;font-weight:600;cursor:pointer;font-size:12px;letter-spacing:1px;text-transform:uppercase;margin-top:20px">
+      Got It
+    </button>
+  </div>
+</div>
+
+<script>
+function showInWorksModal(){
+  document.getElementById('in-works-modal').style.display = 'flex';
+}
+
+function closeInWorksModal(){
+  document.getElementById('in-works-modal').style.display = 'none';
+}
+
+// Close on outside click
+document.addEventListener('click', function(e){
+  const modal = document.getElementById('in-works-modal');
+  if(e.target === modal) closeInWorksModal();
+});
+</script>
 </html>
