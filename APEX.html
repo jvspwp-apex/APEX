@@ -6038,6 +6038,35 @@ function openManageDrawer(){
   renameInput.onkeydown = function(e){ if(e.key==='Enter') renameSaveBtn.click(); };
   renameWrap.appendChild(renameInput);
   renameWrap.appendChild(renameSaveBtn);
+  
+  // Export button
+  const exportBtn = document.createElement('button');
+  exportBtn.className = 'rename-save-btn';
+  exportBtn.textContent = 'Export';
+  exportBtn.style.background = '#4CAF50';
+  exportBtn.style.marginLeft = '8px';
+  exportBtn.onclick = (function(planId){
+    return function(){
+      const workouts = ld('apex_workouts', {})[planId] || [];
+      if(!workouts.length) { alert('No workouts to export'); return; }
+      let csv = 'Date,Day,Workout,Exercise,Sets,Reps,Weight,Notes,Status\n';
+      workouts.forEach(w => {
+        const exs = w.exercises || [];
+        if(!exs.length) csv += w.date + ',' + w.day + ',' + (w.name||'') + ',No exercises,,,,' + (w.notes||'') + ',' + (w.completed?'Completed':'Skipped') + '\n';
+        else exs.forEach((e,i) => {
+          if(i===0) csv += w.date + ',' + w.day + ',' + (w.name||'') + ',' + (e.name||'') + ',' + (e.sets||'') + ',' + (e.reps||'') + ',' + (e.weight||'') + ',' + (w.notes||'') + ',' + (w.completed?'Completed':'Skipped') + '\n';
+          else csv += ',,,' + (e.name||'') + ',' + (e.sets||'') + ',' + (e.reps||'') + ',' + (e.weight||'') + ',,\n';
+        });
+      });
+      const blob = new Blob([csv], {type:'text/csv'});
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = (g.label || 'workout') + '_' + new Date().toISOString().split('T')[0] + '.csv';
+      link.click();
+    };
+  })(g.id);
+  renameWrap.appendChild(exportBtn);
+  
   title.appendChild(renameWrap);
   sub.textContent = g.isBuiltIn ? 'Built-in plan' : (g.trainingStyle || 'AI-generated plan');
   // Update default button state
