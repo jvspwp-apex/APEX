@@ -4002,9 +4002,6 @@ function nextOnboardStep(stepNum){
   });
 }
 
-function skipOnboarding(){
-  dismissOnboarding();
-}
 
 function selectOnboardPill(el, groupId){
   const group = document.getElementById('onboard-' + groupId + '-pills');
@@ -7769,7 +7766,6 @@ async function generatePlan(){
     sv('apex_generated_goals',goals.filter(g=>!g.isBuiltIn));
     
     // ── Log API usage for Pass/Absolute users ──
-    const userEmail = localStorage.getItem('apex_trial_email') || localStorage.getItem('apex_sign_in_email');
     if(userEmail && data.usage){
       const totalTokens = (data.usage.input_tokens || 0) + (data.usage.output_tokens || 0);
       logAPIUsage(userEmail, 'plan_generated', totalTokens);
