@@ -2999,6 +2999,7 @@ body[data-theme="offroad"]{background:#f0ebe3 !important}
       Stored only on this device. Never sent anywhere except Anthropic's servers.
     </div>
     <button class="key-gate-btn" onclick="saveKeyAndStart()">START TRAINING →</button>
+    <button class="key-gate-btn" style="background:transparent;border:1px solid var(--goal-acc);color:var(--goal-acc);margin-top:8px" onclick="closeKeyGate()">Skip for Now</button>
     <div class="key-gate-err" id="key-gate-err">Please enter a valid API key (starts with sk-ant-)</div>
   </div>
 </div>
@@ -3557,19 +3558,15 @@ const APEX_BUSINESS_API_KEY = '';
 function getApiKey(){
   // Check if user provided their own key
   const userKey = lraw('apex_api_key','');
-  if(userKey) return userKey;
-  
-  // Check if user is free/trial (should use business key)
+  // Check if user is free/trial (should use business key via Edge Functions)
   const accessMode = lraw('apex_access_mode','');
   const accessType = lraw('apex_access_type','');
   
   if(accessMode === 'family_indefinite' || 
      accessMode === 'beta_30day' || 
      accessMode === 'trial'){
-    // Free/trial user - use APEX business key (loaded from backend in production)
-    if(APEX_BUSINESS_API_KEY) return APEX_BUSINESS_API_KEY;
-    // Fallback message if key not available
-    alert('API key not configured. Please contact support or add your own Claude API key.');
+    // Free/trial user - uses Edge Functions with business key
+    // No need to return a key here
     return '';
   }
   
@@ -3626,7 +3623,13 @@ function showKeyEdit(){
   }
 }
 
-function showKeyGate(){ document.getElementById("key-gate").classList.remove("hidden"); }
+function showKeyGate(){ 
+  document.getElementById("key-gate").classList.remove("hidden"); 
+}
+
+function closeKeyGate(){
+  document.getElementById("key-gate").classList.add("hidden");
+}
 
 
 // ── PUSH NOTIFICATIONS ────────────────────────────────────────────────────────
@@ -7315,6 +7318,13 @@ document.getElementById('ai-modal').addEventListener('click',function(e){
 async function parseGoal(){
   const raw = document.getElementById('goal-input').value.trim();
   if(!raw){document.getElementById('goal-input').focus();return;}
+  
+  // Get user's API key
+  const apiKey = getApiKey();
+  if(!apiKey){
+    showKeyGate();
+    return;
+  }
 
   // Show inline loading state on button
   const btn = document.getElementById('parse-btn')||document.querySelector('#modal-default .modal-btn');
@@ -7368,7 +7378,8 @@ Return ONLY this JSON:
       },
       body: JSON.stringify({
         goal: raw,
-        userEmail: userEmail
+        userEmail: userEmail,
+        apiKey: apiKey
       })
     });
     
@@ -7701,11 +7712,21 @@ async function generatePlan(){
   ]).join('\n');
 
   try{
+    // Check if user has API key before generating plan
+    const apiKey = getApiKey();
+    if(!apiKey){
+      showKeyGate();
+      clearInterval(loadTimer);
+      document.getElementById('modal-loading').classList.add('hidden');
+      document.getElementById('modal-confirm').classList.remove('hidden');
+      return;
+    }
+    
     // Get user email for analytics logging
     const userEmail = lraw('apex_access_email', 'anonymous@apextrainer.co');
     const goalDescription = parsedIntent.primaryGoal || '';
     
-    // Call Supabase Edge Function (backend handles API key securely)
+    // Call Supabase Edge Function with user's API key
     const resp = await fetch('https://qcdodaccujxvhjfvzbzp.supabase.co/functions/v1/generate-ai-plan', {
       method: 'POST',
       headers: {
@@ -7716,7 +7737,8 @@ async function generatePlan(){
         userEmail: userEmail,
         accessType: accessType || accessMode || 'unknown',
         systemPrompt: systemPrompt,
-        userPrompt: userPrompt
+        userPrompt: userPrompt,
+        apiKey: apiKey
       })
     });
     
