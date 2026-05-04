@@ -3953,6 +3953,8 @@ function skipOnboarding(){
   p.onboardedAt = Date.now();
   saveUserProfile(p);
   closeOnboarding();
+  // Show API key gate after onboarding
+  setTimeout(() => showKeyGate(), 300);
 }
 
 function updateOnboardStep(){
