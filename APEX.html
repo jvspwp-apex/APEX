@@ -7315,11 +7315,6 @@ document.getElementById('ai-modal').addEventListener('click',function(e){
 async function parseGoal(){
   const raw = document.getElementById('goal-input').value.trim();
   if(!raw){document.getElementById('goal-input').focus();return;}
-  if(!getApiKey()){
-    closeModal();
-    document.getElementById('key-gate').classList.remove('hidden');
-    return;
-  }
 
   // Show inline loading state on button
   const btn = document.getElementById('parse-btn')||document.querySelector('#modal-default .modal-btn');
