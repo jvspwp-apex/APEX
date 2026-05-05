@@ -3233,6 +3233,10 @@ function hasAiAccess(){
   if(isPaid()) return true;
   // BYOK: always (user manages their own cost)
   if(getApiKey().length > 0) return true;
+  // Family members: unlimited (using business key)
+  if(localStorage.getItem('apex_access_mode') === 'family_indefinite') return true;
+  // Beta testers: unlimited (using business key)
+  if(localStorage.getItem('apex_approved_tester') === 'true') return true;
   // Trial: within 7 days AND under AI cap
   if(isTrialActive() && getTrialAiUses() < TRIAL_AI_CAP) return true;
   return false;
@@ -7976,11 +7980,16 @@ function checkTrialStatus(){
   const storedFP = localStorage.getItem('apex_trial_fp');
   const currentFP = getDeviceFingerprint();
   
-  // APPROVED TESTER - FULL ACCESS
+  // FAMILY MEMBERS - FULL ACCESS (SKIP TRIAL GATE)
+  if(mode === 'family_indefinite'){
+    return true; // Allow direct access, no trial gate
+  }
+  
+  // APPROVED TESTER - FULL ACCESS (SKIP TRIAL GATE)
   if(approved === 'true'){
     const testerEmail = localStorage.getItem('apex_tester_email') || 'tester';
     showTestingModeBanner(testerEmail);
-    return true; // Allow access
+    return true; // Allow direct access, no trial gate
   }
   
   // TRIAL USER - CHECK IF EXPIRED & DEVICE MATCHES
@@ -8011,9 +8020,9 @@ function checkTrialStatus(){
     }
   }
   
-  // NO TRIAL SET - SHOW GATE
-  showAccessGateModal();
-  return false;
+  // NO TRIAL SET - ALLOW ENTRY TO TRIAL GATE
+  // User will be prompted to enter email via trial gate modal
+  return true;
 }
 
 function showTestingModeBanner(email){
