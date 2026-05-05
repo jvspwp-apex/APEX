@@ -40,6 +40,17 @@ if(document.readyState === 'loading'){
   initSupabaseAPEX();
 }
 
+// Reset AI usage counter daily for trial users
+function resetDailyAICounter(){
+  const lastReset = localStorage.getItem('apex_ai_uses_last_reset');
+  const today = new Date().toDateString();
+  if(lastReset !== today){
+    localStorage.setItem('apex_ai_uses_trial', '0');
+    localStorage.setItem('apex_ai_uses_last_reset', today);
+  }
+}
+window.addEventListener('load', resetDailyAICounter);
+
 // Log session start when page loads
 window.addEventListener('load', function(){
   const email = localStorage.getItem('apex_trial_email') || localStorage.getItem('apex_sign_in_email');
@@ -3906,8 +3917,27 @@ function testNotification(){
 }
 
 // ── Wire service worker to handle notification clicks ─────────────────────────
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.addEventListener('message', function(e){
+let installPrompt = null;
+
+// Listen for install prompt
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  installPrompt = e;
+  // Show install button in settings
+  const installBtn = document.getElementById('pwa-install-btn');
+  if(installBtn) installBtn.style.display = 'block';
+});
+
+function installAPEX(){
+  if(!installPrompt) return;
+  installPrompt.prompt();
+  installPrompt.userChoice.then((choiceResult) => {
+    if(choiceResult.outcome === 'accepted'){
+      console.log('✓ APEX installed');
+    }
+    installPrompt = null;
+  });
+}
     if(e.data && e.data.type === 'NOTIF_CLICK'){
       showPage('train');
     }
@@ -9070,17 +9100,6 @@ function toggleAcc(id){
   </div>
 </div>
 
-
-<div class="apex-confirm" id="apex-confirm">
-  <div class="apex-confirm-box">
-    <div class="apex-confirm-title" id="confirm-title">Confirm</div>
-    <div class="apex-confirm-msg" id="confirm-msg">Are you sure?</div>
-    <div class="apex-confirm-btns">
-      <button class="apex-confirm-btn cancel" onclick="resolveConfirm(false)">Cancel</button>
-      <button class="apex-confirm-btn confirm" id="confirm-yes-btn" onclick="resolveConfirm(true)">Confirm</button>
-    </div>
-  </div>
-</div>
 
 <div class="apex-confirm" id="apex-confirm">
   <div class="apex-confirm-box">
