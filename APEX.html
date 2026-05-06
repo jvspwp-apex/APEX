@@ -39,25 +39,37 @@ function initSupabaseAPEX(){
 // Fetch family/beta tester list from Google Sheet
 async function fetchFamilyListFromSheet(){
   try {
+    console.log('Fetching family list from Netlify function...');
     const resp = await fetch('https://apex-functions.netlify.app/.netlify/functions/get-family-list');
+    console.log('Response status:', resp.status);
+    
     const data = await resp.json();
+    console.log('Family list response:', data);
     
     if(data.success){
       const userEmail = (localStorage.getItem('apex_access_email') || '').toLowerCase();
+      console.log('Checking email:', userEmail);
+      console.log('Family emails:', data.familyEmails);
+      console.log('Beta emails:', data.betaTesterEmails);
       
       // Check if user is family member
-      if(data.familyEmails.includes(userEmail)){
+      if(data.familyEmails && data.familyEmails.includes(userEmail)){
         localStorage.setItem('apex_access_mode', 'family_indefinite');
         console.log('✓ Family access detected:', userEmail);
       }
       // Check if user is beta tester
-      else if(data.betaTesterEmails.includes(userEmail)){
+      else if(data.betaTesterEmails && data.betaTesterEmails.includes(userEmail)){
         localStorage.setItem('apex_access_mode', 'beta_30day');
         console.log('✓ Beta tester detected:', userEmail);
       }
+      else {
+        console.log('Email not found in family or beta lists');
+      }
+    } else {
+      console.log('get-family-list returned error:', data.error);
     }
   } catch(error) {
-    console.log('Note: Could not fetch family list from Google Sheet (this is OK for offline mode)');
+    console.log('Error fetching family list:', error.message);
   }
 }
 
