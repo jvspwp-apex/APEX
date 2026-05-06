@@ -31,6 +31,34 @@ function initSupabaseAPEX(){
   } catch(e){
     console.error('Supabase init failed:', e);
   }
+  
+  // Fetch family list from Google Sheet via Netlify function
+  fetchFamilyListFromSheet();
+}
+
+// Fetch family/beta tester list from Google Sheet
+async function fetchFamilyListFromSheet(){
+  try {
+    const resp = await fetch('https://apex-functions.netlify.app/.netlify/functions/get-family-list');
+    const data = await resp.json();
+    
+    if(data.success){
+      const userEmail = (localStorage.getItem('apex_access_email') || '').toLowerCase();
+      
+      // Check if user is family member
+      if(data.familyEmails.includes(userEmail)){
+        localStorage.setItem('apex_access_mode', 'family_indefinite');
+        console.log('✓ Family access detected:', userEmail);
+      }
+      // Check if user is beta tester
+      else if(data.betaTesterEmails.includes(userEmail)){
+        localStorage.setItem('apex_access_mode', 'beta_30day');
+        console.log('✓ Beta tester detected:', userEmail);
+      }
+    }
+  } catch(error) {
+    console.log('Note: Could not fetch family list from Google Sheet (this is OK for offline mode)');
+  }
 }
 
 // Initialize on page load
