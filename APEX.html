@@ -24,7 +24,7 @@ function initSupabaseAPEX(){
   }
   try {
     SUPABASE_CLIENT = supabase.createClient(
-      'https://qcdodaccujxvhjfvzbzp.supabase.co',
+      'https://apex-functions.netlify.app',
       'sb_publishable_6NupE55C_LSHo6aYSc-uew_cXYP3vXI'
     );
     console.log('✓ Supabase initialized in APEX');
@@ -7402,7 +7402,7 @@ Return ONLY this JSON:
     // Call Supabase Edge Function for NLP parsing
     const userEmail = lraw('apex_access_email', 'anonymous@apextrainer.co');
     
-    const resp = await fetch('https://qcdodaccujxvhjfvzbzp.supabase.co/functions/v1/parse-goal', {
+    const resp = await fetch('https://apex-functions.netlify.app/.netlify/functions/parse-goal', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -7758,7 +7758,7 @@ async function generatePlan(){
     const goalDescription = parsedIntent.primaryGoal || '';
     
     // Call Supabase Edge Function with user's API key
-    const resp = await fetch('https://qcdodaccujxvhjfvzbzp.supabase.co/functions/v1/generate-ai-plan', {
+    const resp = await fetch('https://apex-functions.netlify.app/.netlify/functions/generate-ai-plan', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
