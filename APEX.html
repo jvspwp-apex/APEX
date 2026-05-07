@@ -3625,6 +3625,11 @@ function checkAiAccess(onGranted){
 
 // ── AI uses remaining badge (shown in AI modal) ───────────────────────────────
 function renderAiUsesBadge(){
+  // Family members don't have a usage cap
+  const accessMode = localStorage.getItem('apex_access_mode');
+  const isFamily = accessMode === 'family_indefinite' || accessMode === 'beta_30day';
+  if(isFamily) return;
+  
   if(isPaid() || getApiKey()) return; // not relevant
   if(!isTrialActive()) return;
   const left = getTrialAiUsesLeft();
