@@ -51,6 +51,7 @@ async function fetchFamilyListFromSheet(){
     
     if(!resp.ok){
       console.log('Response error:', resp.statusText);
+      setFamilyAccessLocal();
       return;
     }
     
@@ -81,8 +82,32 @@ async function fetchFamilyListFromSheet(){
     }
   } catch(error) {
     console.log('Error fetching family list:', error);
-    console.log('Error message:', error.message);
-    console.log('Error stack:', error.stack);
+    console.log('Using fallback family list...');
+    setFamilyAccessLocal();
+  }
+}
+
+// Fallback: Local family list (synced from Google Sheet)
+function setFamilyAccessLocal(){
+  const FAMILY_EMAILS = [
+    'lv459172@gmail.com',
+    '01j.valencia@gmail.com',
+    'avalencia@paznaz.org',
+    'evalencia@paznaz.org',
+    'juliaesanchez27@gmail.com',
+    'darkmagykx@gmail.com'
+  ];
+  const BETA_TESTER_EMAILS = ['david.velasco27@yahoo.com'];
+  
+  const userEmail = (localStorage.getItem('apex_access_email') || '').toLowerCase();
+  
+  if(FAMILY_EMAILS.includes(userEmail)){
+    localStorage.setItem('apex_access_mode', 'family_indefinite');
+    console.log('✓ Family access detected (local):', userEmail);
+  }
+  else if(BETA_TESTER_EMAILS.includes(userEmail)){
+    localStorage.setItem('apex_access_mode', 'beta_30day');
+    console.log('✓ Beta tester detected (local):', userEmail);
   }
 }
 
@@ -3579,9 +3604,12 @@ function checkAiAccess(onGranted){
     showTrialExpiredModal();
     return;
   }
-  // Trial active — check AI cap
+  // Trial active — check AI cap (skip for family members)
   if(isTrialActive()){
-    if(getTrialAiUses() >= TRIAL_AI_CAP){
+    const accessMode = localStorage.getItem('apex_access_mode');
+    const isFamily = accessMode === 'family_indefinite' || accessMode === 'beta_30day';
+    
+    if(!isFamily && getTrialAiUses() >= TRIAL_AI_CAP){
       showAiCapModal();
       return;
     }
@@ -7733,9 +7761,12 @@ async function generatePlan(){
     // Trial or Core user without API key
     if(isTrialExpired()){ showTrialExpiredModal(); return; }
     
-    // Check AI usage cap (max 3 during trial/core)
+    // Check AI usage cap (max 3 during trial/core) - skip for family members
+    const accessMode = localStorage.getItem('apex_access_mode');
+    const isFamily = accessMode === 'family_indefinite' || accessMode === 'beta_30day';
+    
     const aiUses = parseInt(localStorage.getItem('apex_ai_uses_trial') || '0');
-    if(aiUses >= TRIAL_AI_CAP){
+    if(!isFamily && aiUses >= TRIAL_AI_CAP){
       showAiCapModal(); 
       return; 
     }
