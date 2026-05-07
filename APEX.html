@@ -36,19 +36,30 @@ function initSupabaseAPEX(){
   fetchFamilyListFromSheet();
 }
 
-// Fetch family/beta tester list from Google Sheet
+// Fetch family/beta tester list from Netlify function
 async function fetchFamilyListFromSheet(){
   try {
     console.log('Fetching family list from Netlify function...');
-    const resp = await fetch('https://apex-functions.netlify.app/.netlify/functions/get-family-list');
+    const resp = await fetch('https://apex-functions.netlify.app/.netlify/functions/get-family-list', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
     console.log('Response status:', resp.status);
+    console.log('Response ok:', resp.ok);
+    
+    if(!resp.ok){
+      console.log('Response error:', resp.statusText);
+      return;
+    }
     
     const data = await resp.json();
     console.log('Family list response:', data);
     
     if(data.success){
       const userEmail = (localStorage.getItem('apex_access_email') || '').toLowerCase();
-      console.log('Checking email:', userEmail);
+      console.log('User email:', userEmail);
       console.log('Family emails:', data.familyEmails);
       console.log('Beta emails:', data.betaTesterEmails);
       
@@ -66,10 +77,12 @@ async function fetchFamilyListFromSheet(){
         console.log('Email not found in family or beta lists');
       }
     } else {
-      console.log('get-family-list returned error:', data.error);
+      console.log('get-family-list error:', data.error);
     }
   } catch(error) {
-    console.log('Error fetching family list:', error.message);
+    console.log('Error fetching family list:', error);
+    console.log('Error message:', error.message);
+    console.log('Error stack:', error.stack);
   }
 }
 
