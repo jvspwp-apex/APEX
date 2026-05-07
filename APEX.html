@@ -7442,9 +7442,13 @@ async function parseGoal(){
   const raw = document.getElementById('goal-input').value.trim();
   if(!raw){document.getElementById('goal-input').focus();return;}
   
-  // Get user's API key
+  // Check if user is family - family members can use AI without their own API key
+  const accessMode = localStorage.getItem('apex_access_mode');
+  const isFamily = accessMode === 'family_indefinite' || accessMode === 'beta_30day';
+  
+  // Get user's API key (only required for non-family users)
   const apiKey = getApiKey();
-  if(!apiKey){
+  if(!apiKey && !isFamily){
     showKeyGate();
     return;
   }
