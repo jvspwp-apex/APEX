@@ -174,17 +174,9 @@ async function logAPIUsage(email, eventType, tokensUsed){
 
 // ── NEW: Log User Engagement (sessions, features, duration) ──
 async function logEngagement(email, eventType, featureName, durationSeconds){
-  if(!SUPABASE_CLIENT || !email) return;
-  try {
-    const { error } = await SUPABASE_CLIENT.from('user_engagement').insert([{
-      email: email,
-      event_type: eventType,
-      feature_name: featureName,
-      duration_seconds: durationSeconds
-    }]);
-    if(error) console.error('Engagement log error:', error);
-    else console.log('✓ Engagement logged:', email, eventType, featureName);
-  } catch(e){ console.error('Engagement exception:', e); }
+  // Engagement logging disabled - Supabase endpoints not available on Netlify
+  // This is optional analytics, not critical to APEX functionality
+  return;
 }
 
 // ── NEW: Log Session Start ──
