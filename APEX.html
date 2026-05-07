@@ -4252,7 +4252,12 @@ async function modifyPlanForInjury(){
 
   // Trial/purchase gate
   if(isTrialExpired()){ showTrialExpiredModal(); return; }
-  if(!isPaid() && !getApiKey() && getTrialAiUses() >= TRIAL_AI_CAP){
+  
+  // Skip AI cap for family members
+  const accessMode = localStorage.getItem('apex_access_mode');
+  const isFamily = accessMode === 'family_indefinite' || accessMode === 'beta_30day';
+  
+  if(!isFamily && !isPaid() && !getApiKey() && getTrialAiUses() >= TRIAL_AI_CAP){
     showAiCapModal(); return;
   }
 
