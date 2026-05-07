@@ -4248,10 +4248,24 @@ async function modifyPlanForInjury(){
   // Skip AI cap for family members
   const accessMode = localStorage.getItem('apex_access_mode');
   const isFamily = accessMode === 'family_indefinite' || accessMode === 'beta_30day';
+  const isPaidUser = isPaid();
+  const hasApiKey = !!getApiKey();
+  const aiUses = getTrialAiUses();
   
-  if(!isFamily && !isPaid() && !getApiKey() && getTrialAiUses() >= TRIAL_AI_CAP){
+  console.log('=== AI CAP GATE DEBUG ===');
+  console.log('accessMode:', accessMode);
+  console.log('isFamily:', isFamily);
+  console.log('isPaid:', isPaidUser);
+  console.log('hasApiKey:', hasApiKey);
+  console.log('aiUses:', aiUses, '/ cap:', TRIAL_AI_CAP);
+  console.log('Should show modal?', !isFamily && !isPaidUser && !hasApiKey && aiUses >= TRIAL_AI_CAP);
+  console.log('======================');
+  
+  if(!isFamily && !isPaidUser && !hasApiKey && aiUses >= TRIAL_AI_CAP){
+    console.log('→ SHOWING AI CAP MODAL');
     showAiCapModal(); return;
   }
+  console.log('→ BYPASSING AI CAP (family or paid)');
 
   const apiKey = getApiKey();
   if(!apiKey){
