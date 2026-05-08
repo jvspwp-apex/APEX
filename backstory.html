@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Story Behind APEX — How It Started</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #0f3d35 0%, #1a1a1a 100%);
+      color: #333;
+      line-height: 1.6;
+    }
+    
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 60px 28px;
+    }
+    
+    .sec-head {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+    
+    .sec-eyebrow {
+      display: block;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #D9652B;
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+    
+    .sec-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 48px;
+      line-height: 1.2;
+      letter-spacing: 1px;
+      color: #0a1f1b;
+      margin-bottom: 20px;
+      font-weight: 700;
+    }
+    
+    .content {
+      font-size: 18px;
+      line-height: 1.8;
+      color: #333;
+      padding: 40px;
+      background: rgba(255,255,255,0.5);
+      border-radius: 8px;
+      border: 1px solid rgba(217,101,43,0.2);
+    }
+    
+    .content p {
+      margin-bottom: 20px;
+    }
+    
+    .content strong {
+      color: #1F3A34;
+      font-weight: 600;
+    }
+    
+    .highlight-box {
+      padding: 20px;
+      background: rgba(217,101,43,0.08);
+      border-left: 4px solid #D9652B;
+      border-radius: 4px;
+      margin-top: 30px;
+      font-size: 14px;
+      color: #333;
+      line-height: 1.7;
+    }
+    
+    .footer-note {
+      margin-top: 30px;
+      padding: 15px;
+      background: rgba(0,0,0,0.03);
+      border-radius: 4px;
+      text-align: center;
+      font-size: 13px;
+      color: #555;
+      font-style: italic;
+    }
+    
+    .cta-section {
+      margin-top: 60px;
+      text-align: center;
+      padding: 40px;
+      background: linear-gradient(135deg, rgba(31,58,52,0.1) 0%, rgba(217,101,43,0.1) 100%);
+      border-radius: 8px;
+      border: 1px solid rgba(217,101,43,0.3);
+    }
+    
+    .cta-section h2 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 32px;
+      color: #0a1f1b;
+      margin-bottom: 15px;
+      font-weight: 700;
+    }
+    
+    .cta-section p {
+      font-size: 16px;
+      color: #666;
+      margin-bottom: 25px;
+    }
+    
+    .btn-primary {
+      background: #D9652B;
+      color: white;
+      border: none;
+      padding: 15px 40px;
+      font-size: 16px;
+      font-weight: bold;
+      border-radius: 4px;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      transition: all 0.3s;
+    }
+    
+    .btn-primary:hover {
+      background: #1F3A34;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(217,101,43,0.3);
+    }
+    
+    footer {
+      background: #1F3A34;
+      color: white;
+      text-align: center;
+      padding: 30px;
+      font-size: 13px;
+      margin-top: 60px;
+    }
+    
+    footer span {
+      color: #D9652B;
+      font-weight: bold;
+    }
+    
+    @media (max-width: 768px) {
+      .sec-title {
+        font-size: 32px;
+      }
+      
+      .content {
+        padding: 25px;
+        font-size: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header style="background: #1F3A34; padding: 15px 28px; display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap;">
+    <a href="/" style="color: #D9652B; text-decoration: none; font-weight: bold; font-size: 20px; margin: 0;">← APEX</a>
+    <div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap; justify-content: center; flex: 1;">
+      <a href="/" style="color: white; text-decoration: none; font-size: 14px; font-weight: 500; transition: color 0.3s;">Themes</a>
+      <a href="/" style="color: white; text-decoration: none; font-size: 14px; font-weight: 500; transition: color 0.3s;">Features</a>
+      <a href="/" style="color: white; text-decoration: none; font-size: 14px; font-weight: 500; transition: color 0.3s;">AI Demo</a>
+      <a href="/" style="color: white; text-decoration: none; font-size: 14px; font-weight: 500; transition: color 0.3s;">Pricing</a>
+      <a href="/" style="color: white; text-decoration: none; font-size: 14px; font-weight: 500; transition: color 0.3s;">FAQ</a>
+      <a href="/backstory.html" style="color: #D9652B; text-decoration: none; font-size: 14px; font-weight: 500;">How this started</a>
+      <button style="background: #D9652B; color: white; border: none; padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; transition: all 0.3s;" onclick="window.location.href='/'">Join APEX</button>
+    </div>
+  </header>
+  
+  <div class="container">
+    <div class="sec-head">
+      <span class="sec-eyebrow">How this started</span>
+      <h1 class="sec-title">The Accident That Started APEX.<br>Zero Cartilage. Zero Excuses.</h1>
+    </div>
+    
+    <div class="content">
+      <p><strong>The Damage:</strong> 2015. Hit by car while cycling. Pinched lower back nerves. Zero cartilage in both knees. Two torn ACLs. Multiple head concussions. The most broken I had ever been.</p>
+      
+      <p><strong>The Overwhelm:</strong> Physical therapy felt endless. Doctors couldn't promise I'd ever cycle, hike, or lift seriously again. I felt completely unprepared and overwhelmed. Cycling, hiking, lifting—these weren't hobbies. They were life. The thought of losing them was unbearable.</p>
+      
+      <p><strong>The Drive:</strong> Zero desire to stop. I had to figure out how to keep moving forward, despite the damage. Not recklessly—intelligently. I needed a training approach built from real research, real periodization, real adaptation.</p>
+      
+      <p><strong>The Gap:</strong> I searched for tools that helped the communities I cared about. Apps for new military candidates. Software for law enforcement fitness standards prepping. Tech built for firefighting CPAT candidates. Recovery programs for people rehabbing solo. My time in PT let me down. The resources I got were outdated. I realized the community needs an update. There are people out there who need help but don't know how or where to start. They need guidance from proven resources to keep moving forward. And nobody's giving it to them.</p>
+      
+      <p><strong>The Solution:</strong> I built APEX to fill that gap. Not to be a coach. To be the resource that should've existed for me. An AI coach trained from my research, my testing, my experience. One you own forever. No subscription trap. No data harvesting. Just a tool that adapts to your broken places and helps you move forward anyway.</p>
+      
+      <div class="highlight-box">
+        Built for people in the same situation—unprepared, overwhelmed, but determined. For family. For friends. For anyone serious about getting better. For cyclists who thought they'd never ride again. For lifters rehabbing a torn shoulder. For hikers building back from injury. For CPAT candidates refusing to fail. For military candidates determined to qualify. For anyone refusing to quit.
+      </div>
+      
+      <div class="footer-note">
+        I appreciate any feedback to improve this project. Any expertise you want to share—I'm listening. Thank you for your support.
+      </div>
+    </div>
+    
+    <div class="cta-section">
+      <h2>Ready to Start Training?</h2>
+      <p>APEX is free to try for 1 month. Runs in your browser. Installs to your phone.</p>
+      <button class="btn-primary" onclick="window.location.href='/'">Launch APEX →</button>
+    </div>
+  </div>
+  
+  <footer>
+    <span>APEX</span> — AI TRAINING & PERFORMANCE TRACKER · YOUR WORKOUTS. YOUR DATA. YOUR WAY.
+  </footer>
+</body>
+</html>
