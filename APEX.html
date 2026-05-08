@@ -3143,7 +3143,7 @@ body[data-theme="offroad"]{background:#f0ebe3 !important}
     <button class="modal-close" onclick="closeModal()">×</button>
     <div style="padding:28px 22px 0;flex-shrink:0">
       <div class="modal-title">APEX AI SPOTTER</div>
-      <div class="modal-powered" id="modal-powered-txt">Powered by Claude · API key required</div>
+      <div class="modal-powered" id="modal-powered-txt">Powered by Claude</div>
       <div id="ai-uses-badge" class="ai-uses-badge" style="display:none"></div>
     </div>
     <div class="modal-body">
@@ -3321,6 +3321,9 @@ function incrementTrialAiUses(){
 
 function getTrialAiUsesLeft(){
   if(isPaid() || getApiKey()) return Infinity;
+  // Family members and beta testers have unlimited
+  const accessMode = localStorage.getItem('apex_access_mode');
+  if(accessMode === 'family_indefinite' || accessMode === 'beta_30day') return Infinity;
   return Math.max(0, TRIAL_AI_CAP - getTrialAiUses());
 }
 
@@ -4060,8 +4063,12 @@ function skipOnboarding(){
   p.onboardedAt = Date.now();
   saveUserProfile(p);
   closeOnboarding();
-  // Show API key gate after onboarding
-  setTimeout(() => showKeyGate(), 300);
+  // Show API key gate after onboarding (skip for family members)
+  const accessMode = localStorage.getItem('apex_access_mode');
+  const isFamily = accessMode === 'family_indefinite' || accessMode === 'beta_30day';
+  if(!isFamily){
+    setTimeout(() => showKeyGate(), 300);
+  }
 }
 
 function updateOnboardStep(){
@@ -7762,18 +7769,18 @@ async function generatePlan(){
   const accessType = localStorage.getItem('apex_access_type');
   const apiKey = getApiKey();
   
+  // Family members have unlimited AI access
+  const isFamily = accessMode === 'family_indefinite' || accessMode === 'beta_30day';
+  
   // Only 'pass' and 'absolute' users get unlimited AI uses within their subscription period
   // 'trial' and 'core' users capped at 3 AI uses total
-  const isUnlimitedAI = (purchaseType === 'pass' || purchaseType === 'absolute');
+  const isUnlimitedAI = (purchaseType === 'pass' || purchaseType === 'absolute') || isFamily;
   
   if(!isUnlimitedAI && !apiKey){
     // Trial or Core user without API key
     if(isTrialExpired()){ showTrialExpiredModal(); return; }
     
     // Check AI usage cap (max 3 during trial/core) - skip for family members
-    const accessMode = localStorage.getItem('apex_access_mode');
-    const isFamily = accessMode === 'family_indefinite' || accessMode === 'beta_30day';
-    
     const aiUses = parseInt(localStorage.getItem('apex_ai_uses_trial') || '0');
     if(!isFamily && aiUses >= TRIAL_AI_CAP){
       showAiCapModal(); 
