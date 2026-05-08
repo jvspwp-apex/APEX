@@ -7853,9 +7853,12 @@ async function generatePlan(){
   ]).join('\n');
 
   try{
-    // Check if user has API key before generating plan
+    // Check if user has API key OR is family member
     const apiKey = getApiKey();
-    if(!apiKey){
+    const accessMode = localStorage.getItem('apex_access_mode');
+    const isFamily = accessMode === 'family_indefinite' || accessMode === 'beta_30day';
+    
+    if(!apiKey && !isFamily){
       showKeyGate();
       clearInterval(loadTimer);
       document.getElementById('modal-loading').classList.add('hidden');
