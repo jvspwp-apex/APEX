@@ -11,111 +11,71 @@
 <link rel="manifest" href="#" id="manifest-link">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=Metal+Mania&display=swap" rel="stylesheet">
 <!-- Supabase Client Library -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-// Supabase initialization with better error handling
-let SUPABASE_CLIENT = null;
+// ══════════════════════════════════════════════════════════════════════════════
+// FRIENDS & FAMILY ACCESS
+// One invite list, checked in one place. The Netlify function get-family-list is
+// the source of truth; the local list below is only a fallback if it can't be
+// reached. All AI runs through Netlify Functions on the APEX business key.
+// ══════════════════════════════════════════════════════════════════════════════
+let SUPABASE_CLIENT = null; // analytics off for the friends & family build
 
-function initSupabaseAPEX(){
-  if(typeof supabase === 'undefined'){
-    console.warn('Supabase not loaded yet, retrying...');
-    setTimeout(initSupabaseAPEX, 500);
-    return;
-  }
+const APEX_FAMILY_LIST_URL = 'https://apex-functions.netlify.app/.netlify/functions/get-family-list';
+const APEX_LOCAL_FAMILY = [
+  'lv459172@gmail.com',
+  '01j.valencia@gmail.com',
+  'avalencia@paznaz.org',
+  'evalencia@paznaz.org',
+  'juliaesanchez27@gmail.com',
+  'darkmagykx@gmail.com'
+];
+const APEX_LOCAL_BETA = ['david.velasco27@yahoo.com'];
+
+function apexAccessEmail(){
+  return (localStorage.getItem('apex_access_email') || '').trim().toLowerCase();
+}
+
+function isSignedIn(){
+  const mode = localStorage.getItem('apex_access_mode');
+  return !!apexAccessEmail() && (mode === 'family_indefinite' || mode === 'beta_30day');
+}
+
+// Returns { mode: 'family_indefinite' | 'beta_30day' | null, remote: bool }
+async function lookupAccess(email){
+  email = (email || '').trim().toLowerCase();
+  const local = APEX_LOCAL_FAMILY.includes(email) ? 'family_indefinite'
+              : APEX_LOCAL_BETA.includes(email)   ? 'beta_30day' : null;
   try {
-    SUPABASE_CLIENT = supabase.createClient(
-      'https://apex-functions.netlify.app',
-      'sb_publishable_6NupE55C_LSHo6aYSc-uew_cXYP3vXI'
-    );
-    console.log('✓ Supabase initialized in APEX');
-  } catch(e){
-    console.error('Supabase init failed:', e);
-  }
-  
-  // Fetch family list from Google Sheet via Netlify function
-  fetchFamilyListFromSheet();
-}
-
-// Fetch family/beta tester list from Netlify function
-async function fetchFamilyListFromSheet(){
-  try {
-    console.log('Fetching family list from Netlify function...');
-    const resp = await fetch('https://apex-functions.netlify.app/.netlify/functions/get-family-list', {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json'
+    const ctrl = new AbortController();
+    const timer = setTimeout(function(){ ctrl.abort(); }, 6000);
+    const resp = await fetch(APEX_FAMILY_LIST_URL, { signal: ctrl.signal });
+    clearTimeout(timer);
+    if(resp.ok){
+      const data = await resp.json();
+      if(data && data.success){
+        const fam  = (data.familyEmails || []).map(function(e){ return String(e).trim().toLowerCase(); });
+        const beta = (data.betaTesterEmails || []).map(function(e){ return String(e).trim().toLowerCase(); });
+        const remote = fam.includes(email) ? 'family_indefinite' : beta.includes(email) ? 'beta_30day' : null;
+        return { mode: remote || local, remote: true };
       }
-    });
-    console.log('Response status:', resp.status);
-    console.log('Response ok:', resp.ok);
-    
-    if(!resp.ok){
-      console.log('Response error:', resp.statusText);
-      setFamilyAccessLocal();
-      return;
     }
-    
-    const data = await resp.json();
-    console.log('Family list response:', data);
-    
-    if(data.success){
-      const userEmail = (localStorage.getItem('apex_access_email') || '').toLowerCase();
-      console.log('User email:', userEmail);
-      console.log('Family emails:', data.familyEmails);
-      console.log('Beta emails:', data.betaTesterEmails);
-      
-      // Check if user is family member
-      if(data.familyEmails && data.familyEmails.includes(userEmail)){
-        localStorage.setItem('apex_access_mode', 'family_indefinite');
-        console.log('✓ Family access detected:', userEmail);
-      }
-      // Check if user is beta tester
-      else if(data.betaTesterEmails && data.betaTesterEmails.includes(userEmail)){
-        localStorage.setItem('apex_access_mode', 'beta_30day');
-        console.log('✓ Beta tester detected:', userEmail);
-      }
-      else {
-        console.log('Email not found in family or beta lists');
-      }
-    } else {
-      console.log('get-family-list error:', data.error);
-    }
-  } catch(error) {
-    console.log('Error fetching family list:', error);
-    console.log('Using fallback family list...');
-    setFamilyAccessLocal();
-  }
+  } catch(e){ /* offline or function down: fall back to local list */ }
+  return { mode: local, remote: false };
 }
 
-// Fallback: Local family list (synced from Google Sheet)
-function setFamilyAccessLocal(){
-  const FAMILY_EMAILS = [
-    'lv459172@gmail.com',
-    '01j.valencia@gmail.com',
-    'avalencia@paznaz.org',
-    'evalencia@paznaz.org',
-    'juliaesanchez27@gmail.com',
-    'darkmagykx@gmail.com'
-  ];
-  const BETA_TESTER_EMAILS = ['david.velasco27@yahoo.com'];
-  
-  const userEmail = (localStorage.getItem('apex_access_email') || '').toLowerCase();
-  
-  if(FAMILY_EMAILS.includes(userEmail)){
-    localStorage.setItem('apex_access_mode', 'family_indefinite');
-    console.log('✓ Family access detected (local):', userEmail);
+// Re-check the signed-in email in the background. Only signs someone out if the
+// live list loaded AND they're on neither list (so an outage never locks family out).
+async function refreshAccessInBackground(){
+  const email = apexAccessEmail();
+  if(!email) return;
+  const r = await lookupAccess(email);
+  if(r.mode){
+    localStorage.setItem('apex_access_mode', r.mode);
+  } else if(r.remote){
+    localStorage.removeItem('apex_access_email');
+    localStorage.removeItem('apex_access_mode');
+    location.reload();
   }
-  else if(BETA_TESTER_EMAILS.includes(userEmail)){
-    localStorage.setItem('apex_access_mode', 'beta_30day');
-    console.log('✓ Beta tester detected (local):', userEmail);
-  }
-}
-
-// Initialize on page load
-if(document.readyState === 'loading'){
-  document.addEventListener('DOMContentLoaded', initSupabaseAPEX);
-} else {
-  initSupabaseAPEX();
 }
 
 // Reset AI usage counter daily for trial users
@@ -2774,6 +2734,11 @@ body[data-theme="offroad"]{background:#f0ebe3 !important}
   font-size:8px;color:var(--amber);cursor:pointer;letter-spacing:.5px;text-transform:uppercase;font-weight:700;margin-top:4px}
 .supp-checking{font-size:10px;color:var(--muted);text-align:center;padding:10px;animation:pulse 1.5s infinite}
 
+
+/* Check-in result view: hides the question, shows guidance */
+#checkin-result{display:none}
+#checkin-modal.show-result #checkin-result{display:block}
+#checkin-modal.show-result .onboard-box > :not(#checkin-result){display:none !important}
 </style>
 </head>
 <body>
@@ -3086,6 +3051,20 @@ body[data-theme="offroad"]{background:#f0ebe3 !important}
 </div>
 
 <!-- TRIAL GATE -->
+<div id="signin-gate" class="key-gate hidden">
+  <div class="key-gate-logo">APEX</div>
+  <div class="key-gate-sub">AI Training &amp; Performance Tracker</div>
+  <div class="key-gate-card">
+    <div class="key-gate-title">Sign In</div>
+    <div class="key-gate-desc">APEX is invite-only right now.<br>Enter the email you were invited with.</div>
+    <input class="key-gate-input" id="signin-email" type="email" autocomplete="email" inputmode="email"
+      autocapitalize="off" spellcheck="false" placeholder="you@example.com"
+      onkeydown="if(event.key==='Enter')submitSignIn()">
+    <button class="key-gate-btn" id="signin-btn" onclick="submitSignIn()">SIGN IN →</button>
+    <div class="key-gate-err" id="signin-err"></div>
+  </div>
+</div>
+
 <div class="trial-gate" id="trial-gate">
   <div class="trial-box">
     <div class="trial-logo">APEX</div>
@@ -3203,7 +3182,7 @@ e.g. &quot;Lock in this summer, grow my arms and quads&quot;
     <div id="modal-error" class="hidden">
       <div style="margin:16px 0;color:var(--amber)"><span style="display:inline-flex;width:40px;height:40px;align-items:center;justify-content:center;color:var(--goal-acc)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span></div>
       <div class="modal-error-txt" id="error-msg"></div>
-      <button class="modal-btn" onclick="resetModal()">Try Again</button>
+      <button class="modal-btn" onclick="retryBuild()">Try Again</button>
     </div>
   </div>
 </div>
@@ -3299,17 +3278,7 @@ function isPaid(){
 }
 
 function hasAiAccess(){
-  // Paid: always
-  if(isPaid()) return true;
-  // BYOK: always (user manages their own cost)
-  if(getApiKey().length > 0) return true;
-  // Family members: unlimited (using business key)
-  if(localStorage.getItem('apex_access_mode') === 'family_indefinite') return true;
-  // Beta testers: unlimited (using business key)
-  if(localStorage.getItem('apex_approved_tester') === 'true') return true;
-  // Trial: within 7 days AND under AI cap
-  if(isTrialActive() && getTrialAiUses() < TRIAL_AI_CAP) return true;
-  return false;
+  return isSignedIn() || getApiKey().length > 0;
 }
 
 // ── Trial AI usage counter ────────────────────────────────────────────────────
@@ -3539,40 +3508,9 @@ function purchaseFromApp(tier){
 
 // ── Trial indicator in header ─────────────────────────────────────────────────
 function renderTrialIndicator(){
-  // Remove any existing indicator
+  // Trial indicator retired in the friends & family build
   const old = document.getElementById('trial-indicator');
   if(old) old.remove();
-
-  // Don't show if paid or free_only
-  if(isPaid() || getTrialStatus() === 'free_only') return;
-
-  // Don't show if trial hasn't started
-  if(!getTrialStarted()) return;
-
-  const daysLeft = getTrialDaysLeft();
-
-  // Trial expired — show persistent banner on train page instead
-  if(daysLeft <= 0){
-    renderExpiredBanner();
-    return;
-  }
-
-  // Show compact indicator in header
-  const hd = document.getElementById('apex-header');
-  if(!hd) return;
-
-  const ind = document.createElement('button');
-  ind.id = 'trial-indicator';
-  ind.className = 'trial-indicator' + (daysLeft <= 2 ? ' urgent' : '');
-  ind.textContent = daysLeft === 1 ? 'LAST DAY' : daysLeft + ' DAYS LEFT';
-  ind.onclick = function(){
-    if(isTrialExpired()) showTrialExpiredModal();
-    else openTrialGate(); // reopen with purchase options
-  };
-
-  // Insert into header row
-  const hdR = hd.querySelector('.hd-r') || hd;
-  hdR.insertAdjacentElement('afterbegin', ind);
 }
 
 function renderExpiredBanner(){
@@ -3592,57 +3530,18 @@ function renderExpiredBanner(){
 
 // ── AI feature gate check (called before any AI action) ──────────────────────
 function checkAiAccess(onGranted){
-  // Paid users: always through
-  if(isPaid()){
+  if(isSignedIn() || getApiKey().length > 0){
     onGranted();
     return;
   }
-  // BYOK: always through
-  if(getApiKey().length > 0){
-    onGranted();
-    return;
-  }
-  // Trial expired
-  if(isTrialExpired()){
-    showTrialExpiredModal();
-    return;
-  }
-  // Trial active — check AI cap (skip for family members)
-  if(isTrialActive()){
-    const accessMode = localStorage.getItem('apex_access_mode');
-    const isFamily = accessMode === 'family_indefinite' || accessMode === 'beta_30day';
-    
-    if(!isFamily && getTrialAiUses() >= TRIAL_AI_CAP){
-      showAiCapModal();
-      return;
-    }
-    // Increment and proceed
-    incrementTrialAiUses();
-    renderAiUsesBadge();
-    onGranted();
-    return;
-  }
-  // No trial started at all — show trial gate
-  openTrialGate();
+  showSignInGate();
 }
 
 // ── AI uses remaining badge (shown in AI modal) ───────────────────────────────
 function renderAiUsesBadge(){
-  // Family members don't have a usage cap
-  const accessMode = localStorage.getItem('apex_access_mode');
-  const isFamily = accessMode === 'family_indefinite' || accessMode === 'beta_30day';
-  if(isFamily) return;
-  
-  if(isPaid() || getApiKey()) return; // not relevant
-  if(!isTrialActive()) return;
-  const left = getTrialAiUsesLeft();
+  // No usage cap for friends & family
   const badge = document.getElementById('ai-uses-badge');
-  if(!badge) return;
-  badge.style.display = 'inline-flex';
-  badge.className = 'ai-uses-badge' + (left === 0 ? ' empty' : left === 1 ? ' low' : '');
-  badge.textContent = left === 0 ? 'AI USES EXHAUSTED'
-    : left === 1 ? '1 FREE AI USE LEFT'
-    : left + ' FREE AI USES LEFT (TRIAL)';
+  if(badge) badge.style.display = 'none';
 }
 
 // ── API KEY MANAGEMENT ───────────────────────────────────────────────────────
@@ -3652,22 +3551,9 @@ function renderAiUsesBadge(){
 const APEX_BUSINESS_API_KEY = '';
 
 function getApiKey(){
-  // Check if user provided their own key
-  const userKey = lraw('apex_api_key','');
-  // Check if user is free/trial (should use business key via Edge Functions)
-  const accessMode = lraw('apex_access_mode','');
-  const accessType = lraw('apex_access_type','');
-  
-  if(accessMode === 'family_indefinite' || 
-     accessMode === 'beta_30day' || 
-     accessMode === 'trial'){
-    // Free/trial user - uses Edge Functions with business key
-    // No need to return a key here
-    return '';
-  }
-  
-  // Paid user without key - return empty (they need to add BYOK or upgrade)
-  return '';
+  // Personal key, if one was ever saved on this device. Friends & family don't
+  // need one: plan building runs through Netlify on the APEX business key.
+  return lraw('apex_api_key', '');
 }
 
 function saveKeyAndStart(){
@@ -3687,6 +3573,7 @@ function saveKeyAndStart(){
 
   // Show trial gate first if needed, else onboarding/check-in
   setTimeout(function(){
+    if(document.querySelector('#ai-modal.open, .onboard-modal.open, #apex-confirm.open, #share-modal.open')) return;
     if(shouldShowTrialGate()){
       openTrialGate();
     } else if(shouldShowOnboarding()){
@@ -4050,6 +3937,7 @@ function openOnboarding(){
   onboardState = { step: 1, skill: null, gender: null, injuries: [] };
   const modal = document.getElementById('onboard-modal');
   if(!modal) return;
+  renderInjuryChips('onboard-injury-chips', false);
   updateOnboardStep();
   modal.classList.add('open');
 }
@@ -4063,12 +3951,6 @@ function skipOnboarding(){
   p.onboardedAt = Date.now();
   saveUserProfile(p);
   closeOnboarding();
-  // Show API key gate after onboarding (skip for family members)
-  const accessMode = localStorage.getItem('apex_access_mode');
-  const isFamily = accessMode === 'family_indefinite' || accessMode === 'beta_30day';
-  if(!isFamily){
-    setTimeout(() => showKeyGate(), 300);
-  }
 }
 
 function updateOnboardStep(){
@@ -4131,6 +4013,20 @@ function selectOnboardPill(el, groupId){
   if(groupId === 'level') onboardState.skill = val;
   if(groupId === 'injury') onboardState.injury = val;
   if(groupId === 'gender') onboardState.gender = val;
+}
+
+const INJURY_AREAS = [
+  ['knee','Knee'], ['back','Back'], ['shoulder','Shoulder'], ['ankle','Ankle'],
+  ['hip','Hip'], ['wrist','Wrist'], ['neck','Neck'], ['elbow','Elbow'],
+  ['illness','Sick'], ['fatigue','Wiped out']
+];
+function renderInjuryChips(containerId, includeDaily){
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  el.innerHTML = INJURY_AREAS
+    .filter(function(a){ return includeDaily || (a[0] !== 'illness' && a[0] !== 'fatigue'); })
+    .map(function(a){ return '<div class="injury-chip" data-val="' + a[0] + '" onclick="toggleInjuryChip(this)">' + a[1] + '</div>'; })
+    .join('');
 }
 
 function toggleInjuryChip(el){
@@ -4198,6 +4094,7 @@ function openCheckin(){
   checkinState = { step: 1, feeling: null };
   const modal = document.getElementById('checkin-modal');
   if(!modal) return;
+  modal.classList.remove('show-result');
   for(let i = 1; i <= 2; i++){
     const el = document.getElementById('checkin-step-' + i);
     if(el) el.classList.toggle('active', i === 1);
@@ -4205,11 +4102,17 @@ function openCheckin(){
   // Clear selections
   const feelings = document.querySelectorAll('#checkin-modal .checkin-feeling');
   feelings.forEach(function(f){ f.classList.remove('selected'); });
-  const chips = document.querySelectorAll('#checkin-injury-chips .injury-chip');
-  chips.forEach(function(ch){ ch.classList.remove('selected'); });
-  const ta = document.getElementById('checkin-injury-text');
+  renderInjuryChips('checkin-injury-chips', true);
+  const ta = document.getElementById('checkin-injury-notes');
   if(ta) ta.value = '';
+  document.getElementById('checkin-injury-section').style.display = 'none';
+  document.getElementById('checkin-normal-btns').style.display = '';
   modal.classList.add('open');
+}
+
+function _checkinResult(){
+  document.getElementById('checkin-modal').classList.add('show-result');
+  return document.getElementById('checkin-result');
 }
 
 function dismissCheckin(){
@@ -4236,8 +4139,8 @@ function selectCheckinFeeling(el){
   } else {
     // Sore / Injured — go to step 2
     setTimeout(function(){
-      document.getElementById('checkin-step-1').classList.remove('active');
-      document.getElementById('checkin-step-2').classList.add('active');
+      document.getElementById('checkin-injury-section').style.display = 'block';
+      document.getElementById('checkin-normal-btns').style.display = 'none';
     }, 250);
   }
 }
@@ -4282,31 +4185,6 @@ async function modifyPlanForInjury(){
     return;
   }
 
-  // Trial/purchase gate
-  if(isTrialExpired()){ showTrialExpiredModal(); return; }
-  
-  // Skip AI cap for family members
-  const accessMode = localStorage.getItem('apex_access_mode');
-  const isFamily = accessMode === 'family_indefinite' || accessMode === 'beta_30day';
-  const isPaidUser = isPaid();
-  const hasApiKey = !!getApiKey();
-  const aiUses = getTrialAiUses();
-  
-  console.log('=== AI CAP GATE DEBUG ===');
-  console.log('accessMode:', accessMode);
-  console.log('isFamily:', isFamily);
-  console.log('isPaid:', isPaidUser);
-  console.log('hasApiKey:', hasApiKey);
-  console.log('aiUses:', aiUses, '/ cap:', TRIAL_AI_CAP);
-  console.log('Should show modal?', !isFamily && !isPaidUser && !hasApiKey && aiUses >= TRIAL_AI_CAP);
-  console.log('======================');
-  
-  if(!isFamily && !isPaidUser && !hasApiKey && aiUses >= TRIAL_AI_CAP){
-    console.log('→ SHOWING AI CAP MODAL');
-    showAiCapModal(); return;
-  }
-  console.log('→ BYPASSING AI CAP (family or paid)');
-
   const apiKey = getApiKey();
   if(!apiKey){
     // Save the injuries to profile for future reference
@@ -4326,7 +4204,7 @@ async function modifyPlanForInjury(){
     sraw('apex_last_checkin_date', todayDateStr());
 
     // Show static helpful guidance instead of booting to key gate
-    document.getElementById('checkin-step-2').innerHTML =
+    _checkinResult().innerHTML =
       '<div class="onboard-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg></div>' +
       '<div class="onboard-title">LOGGED — LISTEN TO YOUR BODY</div>' +
       '<div class="onboard-sub">Your limitation is saved. Here\'s general guidance for today:</div>' +
@@ -4334,12 +4212,10 @@ async function modifyPlanForInjury(){
         getInjuryGuidance(chips) +
       '</div>' +
       '<div style="font-size:10px;color:var(--muted);line-height:1.6;margin-bottom:12px;text-align:left">' +
-        '<strong style="color:var(--goal-acc)">Want a fully adapted plan?</strong><br>' +
-        'AI-powered plan adaptation requires a Claude API key. Add one in Settings anytime — APEX will rebuild your plan around this limitation.' +
+        'Your plan stays the same today — skip or swap any exercise that aggravates it. You can review saved limitations in Settings.' +
       '</div>' +
       '<div class="onboard-btns">' +
-        '<button class="onboard-btn secondary" onclick="dismissCheckin()">Got it</button>' +
-        '<button class="onboard-btn" onclick="dismissCheckin();showPage(\'theme\');">Settings →</button>' +
+        '<button class="onboard-btn" onclick="dismissCheckin()">Got it</button>' +
       '</div>';
     return;
   }
@@ -4348,7 +4224,7 @@ async function modifyPlanForInjury(){
   sraw('apex_last_checkin_date', todayDateStr());
 
   // Show loading state
-  document.getElementById('checkin-step-2').innerHTML =
+  _checkinResult().innerHTML =
     '<div class="onboard-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>' +
     '<div class="onboard-title">ADAPTING YOUR PLAN</div>' +
     '<div class="onboard-sub" id="modify-sub">Analyzing limitations...</div>' +
@@ -4504,7 +4380,7 @@ async function modifyPlanForInjury(){
 
   } catch(err){
     console.error('Modify plan error:', err);
-    document.getElementById('checkin-step-2').innerHTML =
+    _checkinResult().innerHTML =
       '<div class="onboard-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>' +
       '<div class="onboard-title">SOMETHING WENT WRONG</div>' +
       '<div class="onboard-sub">' + (err.message || 'Could not adapt plan. Try again or create manually.') + '</div>' +
@@ -4601,7 +4477,7 @@ const APEX_FEATURES = {
   ],
   ai: [
     { name: 'AI plan generation (natural language)',  tag: 'AI' },
-    { name: 'Injury-adapted plan modification',        tag: 'AI' },
+    { name: 'Injury check-in guidance',                tag: 'AI' },
     { name: 'Daily resource tip refresh',              tag: 'AI' }
   ]
 };
@@ -4609,7 +4485,7 @@ const APEX_FEATURES = {
 function renderFeatureStatusSection(){
   const el = document.getElementById('feature-status-section');
   if(!el) return;
-  const hasKey = getApiKey().length > 0;
+  const hasKey = isSignedIn() || getApiKey().length > 0;
   const H = [];
 
   
@@ -4625,7 +4501,7 @@ function renderFeatureStatusSection(){
   H.push('</div>');
 
   H.push('<div class="feature-status">');
-  H.push('<div class="feature-status-hdr">AI-powered features (require API key)</div>');
+  H.push('<div class="feature-status-hdr">AI-powered features</div>');
   APEX_FEATURES.ai.forEach(function(f){
     const cls = hasKey ? 'active' : 'locked';
     H.push('<div class="feature-row ' + cls + '">');
@@ -4730,30 +4606,14 @@ function promptAddInjury(){
 function renderSettingsSection(){
   var el = document.getElementById('settings-section');
   if(!el) return;
-  var key = getApiKey();
-  var hasKey = key.length > 0;
-  var masked = hasKey ? key.slice(0,12)+'••••••••••••' : 'Not set';
   var H = [];
-  // API key row
+  var email = apexAccessEmail();
   H.push('<div class="settings-row">');
   H.push('<div class="settings-row-info">');
-  H.push('<div class="settings-row-label"><span class="key-dot'+(hasKey?'':' missing')+'"></span>Anthropic API Key</div>');
-  H.push('<div class="settings-row-desc">'+(hasKey ? masked : 'Required to generate AI plans')+'</div>');
+  H.push('<div class="settings-row-label"><span class="key-dot"></span>Signed in</div>');
+  H.push('<div class="settings-row-desc" style="word-break:break-all">' + (email || 'Not signed in') + '</div>');
   H.push('</div>');
-  H.push(hasKey
-    ? '<button class="settings-btn" onclick="showKeyEdit()">Change</button>'
-    : '<button class="settings-btn" onclick="showKeyGate()">Add Key</button>');
-  H.push('</div>');
-  if(hasKey){
-    H.push('<div class="settings-row"><div class="settings-row-info"><div class="settings-row-label">Remove Key</div><div class="settings-row-desc">Clears key from this device</div></div><button class="settings-btn danger" onclick="clearApiKey()">Remove</button></div>');
-  }
-  // PERSISTENT AI PROMO — always visible
-  H.push('<div class="ai-promo-card">');
-  H.push('<div class="ai-promo-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>');
-  H.push('<div class="ai-promo-body">');
-  H.push('<div class="ai-promo-title">7-DAY FREE TRIAL</div>');
-  H.push('<div class="ai-promo-desc">Unlock <strong>AI plan generation</strong> and <strong>injury adaptation</strong>. Speak your goal — get a structured program built for you.<br><span class="ai-promo-price">$15 one-time &middot; own it forever</span></div>');
-  H.push('</div>');
+  H.push('<button class="settings-btn" onclick="signOut()">Sign out</button>');
   H.push('</div>');
   // Contact Section
   H.push('<div style="margin-top:20px;padding-top:16px;border-top:1px solid rgba(245,238,216,.08)">');
@@ -7415,6 +7275,8 @@ function showPage(p){
 
 // ── AI MODAL ──────────────────────────────────────────────────────────────────
 let parsedIntent = null; // holds structured goal from NLP parse stage
+let _planBuilding = false; // blocks a second build while one is running
+const _CONFIRM_ICON_DEFAULT = document.getElementById('confirm-icon').innerHTML;
 
 function openModal(){
   renderAiUsesBadge();
@@ -7428,6 +7290,11 @@ function closeModal(){document.getElementById('ai-modal').classList.remove('open
 
 function resetModal(){
   parsedIntent = null;
+  _planBuilding = false;
+  document.getElementById('build-plan-btn').style.display = 'none';
+  document.getElementById('parse-goal-footer-btn').style.display = 'none';
+  const srv = document.getElementById('modal-serve');
+  if(srv) srv.remove();
   selectedDays = 4; // reset to default
   ['modal-confirm','modal-loading','modal-success','modal-error']
     .forEach(id=>document.getElementById(id).classList.add('hidden'));
@@ -7454,16 +7321,7 @@ async function parseGoal(){
   const raw = document.getElementById('goal-input').value.trim();
   if(!raw){document.getElementById('goal-input').focus();return;}
   
-  // Check if user is family - family members can use AI without their own API key
-  const accessMode = localStorage.getItem('apex_access_mode');
-  const isFamily = accessMode === 'family_indefinite' || accessMode === 'beta_30day';
-  
-  // Get user's API key (only required for non-family users)
-  const apiKey = getApiKey();
-  if(!apiKey && !isFamily){
-    showKeyGate();
-    return;
-  }
+  if(!isSignedIn()){ closeModal(); showSignInGate(); return; }
 
   // Show inline loading state on button
   const btn = document.getElementById('parse-btn')||document.querySelector('#modal-default .modal-btn');
@@ -7542,10 +7400,11 @@ Return ONLY this JSON:
   }catch(err){
     if(btn){btn.innerHTML=origText;btn.disabled=false;}
     // Detect file:// CORS block (fetch throws TypeError with no message)
-    const isFileOrigin = location.protocol==='file:';
-    const isCORSBlock = err instanceof TypeError && (!err.message || err.message.toLowerCase().includes('fetch') || err.message.toLowerCase().includes('network') || err.message==='Failed to fetch' || err.message==='Load failed');
-    if(isFileOrigin || isCORSBlock){
-      showServeError();
+    if(location.protocol==='file:'){ showServeError(); return; }
+    if(_isNetworkError(err)){
+      document.getElementById('modal-default').classList.add('hidden');
+      document.getElementById('modal-error').classList.remove('hidden');
+      document.getElementById('error-msg').textContent = NETWORK_MSG;
       return;
     }
     // Real API error — show it clearly but still allow fallback confirm
@@ -7560,7 +7419,7 @@ Return ONLY this JSON:
       icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="4.5" r="2"/><path d="M12 7v6m-3 0l-2 5m5-5l2 5M9 13h6M9 7l-2 3m8-3l2 3"/></svg>`,
       specialNotes: `Original request: ${raw}`
     };
-    renderConfirmCard(parsedIntent, `Note: quick-parse unavailable (${err.message}) — plan will still be built from your full request.`);
+    renderConfirmCard(parsedIntent, 'Quick read unavailable — your plan will still be built from your full request.');
   }
 }
 
@@ -7748,7 +7607,7 @@ function renderConfirmCard(intent, warning){
     </div>`:''}
   `;
 
-  document.getElementById('confirm-icon').textContent = intent.icon || `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>`;
+  _setConfirmIcon(intent.icon);
   document.getElementById('modal-default').classList.add('hidden');
   document.getElementById('modal-confirm').classList.remove('hidden');
   // Show sticky BUILD button, hide UNDERSTAND button
@@ -7756,6 +7615,32 @@ function renderConfirmCard(intent, warning){
   document.getElementById('parse-goal-footer-btn').style.display = 'none';
   // Render day selector after confirm card is visible
   renderDaySelector();
+}
+
+function _setConfirmIcon(icon){
+  const el = document.getElementById('confirm-icon');
+  const v = (icon || '').trim();
+  if(v.startsWith('<svg')) el.innerHTML = v;   // built-in SVG icon
+  else if(v) el.textContent = v;               // emoji from the AI
+  else el.innerHTML = _CONFIRM_ICON_DEFAULT;
+}
+
+function _isNetworkError(err){
+  const m = String((err && err.message) || '').toLowerCase();
+  return (err instanceof TypeError) || /load failed|failed to fetch|networkerror|network request failed|network connection/.test(m);
+}
+const NETWORK_MSG = "Couldn't reach APEX right now. Check your connection and tap Try Again.";
+
+// After a failed build, go back to the confirm card (keeps the parsed goal)
+function retryBuild(){
+  document.getElementById('modal-error').classList.add('hidden');
+  if(parsedIntent){
+    document.getElementById('modal-confirm').classList.remove('hidden');
+    document.getElementById('build-plan-btn').style.display = 'block';
+  } else {
+    // Goal reader failed: back to the input with their words still there
+    document.getElementById('modal-default').classList.remove('hidden');
+  }
 }
 
 // ── STAGE 2: Generate full plan from parsed intent ────────────────────────────
@@ -7768,29 +7653,11 @@ async function generatePlan(){
   const accessType = localStorage.getItem('apex_access_type');
   const apiKey = getApiKey();
   
-  // Family members have unlimited AI access
-  const isFamily = accessMode === 'family_indefinite' || accessMode === 'beta_30day';
-  
-  // Only 'pass' and 'absolute' users get unlimited AI uses within their subscription period
-  // 'trial' and 'core' users capped at 3 AI uses total
-  const isUnlimitedAI = (purchaseType === 'pass' || purchaseType === 'absolute') || isFamily;
-  
-  if(!isUnlimitedAI && !apiKey){
-    // Trial or Core user without API key
-    if(isTrialExpired()){ showTrialExpiredModal(); return; }
-    
-    // Check AI usage cap (max 3 during trial/core) - skip for family members
-    const aiUses = parseInt(localStorage.getItem('apex_ai_uses_trial') || '0');
-    if(!isFamily && aiUses >= TRIAL_AI_CAP){
-      showAiCapModal(); 
-      return; 
-    }
-    
-    // Increment usage counter
-    localStorage.setItem('apex_ai_uses_trial', (aiUses + 1).toString());
-    renderAiUsesBadge();
-  }
-  
+  if(_planBuilding) return;               // ignore double taps
+  if(!isSignedIn()){ closeModal(); showSignInGate(); return; }
+  _planBuilding = true;
+  document.getElementById('build-plan-btn').style.display = 'none';
+
   document.getElementById('modal-confirm').classList.add('hidden');
   document.getElementById('modal-loading').classList.remove('hidden');
 
@@ -7853,19 +7720,6 @@ async function generatePlan(){
   ]).join('\n');
 
   try{
-    // Check if user has API key OR is family member
-    const apiKey = getApiKey();
-    const accessMode = localStorage.getItem('apex_access_mode');
-    const isFamily = accessMode === 'family_indefinite' || accessMode === 'beta_30day';
-    
-    if(!apiKey && !isFamily){
-      showKeyGate();
-      clearInterval(loadTimer);
-      document.getElementById('modal-loading').classList.add('hidden');
-      document.getElementById('modal-confirm').classList.remove('hidden');
-      return;
-    }
-    
     // Get user email for analytics logging
     const userEmail = lraw('apex_access_email', 'anonymous@apextrainer.co');
     const goalDescription = parsedIntent.primaryGoal || '';
@@ -7882,13 +7736,14 @@ async function generatePlan(){
         accessType: accessType || accessMode || 'unknown',
         systemPrompt: systemPrompt,
         userPrompt: userPrompt,
-        apiKey: apiKey
+        apiKey: ''   // friends & family: Netlify uses the APEX business key
       })
     });
     
     if(!resp.ok){
-      const err=await resp.json();
-      throw new Error(err.error?.message||`API error ${resp.status}`);
+      let err = {};
+      try { err = await resp.json(); } catch(_){ /* non-JSON error page */ }
+      throw new Error((err.error && (err.error.message || err.error)) || `Server error ${resp.status}. Please try again.`);
     }
     
     const data=await resp.json();
@@ -7920,6 +7775,10 @@ async function generatePlan(){
     if(!plan.days||!Array.isArray(plan.days)||plan.days.length===0){
       throw new Error('Incomplete plan. Please try again.');
     }
+    // Our own id + flags, so an AI echo can never collide with or overwrite a plan
+    plan.id = planId;
+    plan.isBuiltIn = false;
+    plan.label = plan.label || String(parsedIntent.planName || 'MY PLAN').slice(0,15);
     clearInterval(loadTimer);
     // Save the prompt/intent so it can be viewed and archived later
     savePlanPrompt(plan.id, parsedIntent, selectedDays);
@@ -7941,19 +7800,15 @@ async function generatePlan(){
     document.getElementById('modal-loading').classList.add('hidden');
     document.getElementById('modal-success').classList.remove('hidden');
     document.getElementById('plan-name-display').textContent=plan.label;
-    renderGoalBar();
-    cGoal=plan.id;applyTheme(plan);cDay=0;
+    _planBuilding = false;
+    switchGoal(plan.id);   // show the new plan right away
   }catch(err){
+    _planBuilding = false;
     clearInterval(loadTimer);
     document.getElementById('modal-loading').classList.add('hidden');
-    const isFileOrigin = location.protocol==='file:';
-    const isCORSBlock = err instanceof TypeError && (!err.message||err.message==='Failed to fetch'||err.message==='Load failed'||err.message.toLowerCase().includes('network'));
-    if(isFileOrigin||isCORSBlock){
-      showServeError();
-      return;
-    }
+    if(location.protocol==='file:'){ showServeError(); return; }
     document.getElementById('modal-error').classList.remove('hidden');
-    document.getElementById('error-msg').textContent=err.message||'Something went wrong. Please try again.';
+    document.getElementById('error-msg').textContent = _isNetworkError(err) ? NETWORK_MSG : (err.message || 'Something went wrong. Please try again.');
   }
 }
 
@@ -8585,8 +8440,68 @@ function showDataDeletedMessage(workoutCount){
   setTimeout(() => location.reload(), 2000);
 }
 
+// ── SIGN IN ───────────────────────────────────────────────────────────────────
+function showSignInGate(){
+  const gate = document.getElementById('signin-gate');
+  gate.classList.remove('hidden');
+  const input = document.getElementById('signin-email');
+  // Email handed over from the landing page: fill it in and check it
+  const handoff = (localStorage.getItem('apex_signin_prefill') || '').trim();
+  if(handoff){
+    localStorage.removeItem('apex_signin_prefill');
+    input.value = handoff;
+    submitSignIn();
+  } else {
+    setTimeout(function(){ input.focus(); }, 200);
+  }
+}
+
+let _signingIn = false;
+async function submitSignIn(){
+  if(_signingIn) return;
+  const input = document.getElementById('signin-email');
+  const err = document.getElementById('signin-err');
+  const btn = document.getElementById('signin-btn');
+  const email = (input.value || '').trim().toLowerCase();
+  err.style.display = 'none';
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+    err.textContent = 'Enter a valid email address.';
+    err.style.display = 'block';
+    return;
+  }
+  _signingIn = true;
+  btn.disabled = true;
+  btn.textContent = 'CHECKING...';
+  const r = await lookupAccess(email);
+  _signingIn = false;
+  btn.disabled = false;
+  btn.textContent = 'SIGN IN →';
+  if(!r.mode){
+    err.textContent = "That email isn't on the invite list yet. Ask Jesse to add it.";
+    err.style.display = 'block';
+    return;
+  }
+  localStorage.setItem('apex_access_email', email);
+  localStorage.setItem('apex_access_mode', r.mode);
+  document.getElementById('signin-gate').classList.add('hidden');
+  init();
+}
+
+function signOut(){
+  apexConfirm('SIGN OUT?', 'Your plans and progress stay saved on this device.', 'Sign out', false)
+    .then(function(ok){
+      if(!ok) return;
+      localStorage.removeItem('apex_access_email');
+      localStorage.removeItem('apex_access_mode');
+      location.reload();
+    });
+}
+
+let _appStarted = false;
 function init(){
-  if(!checkTrialStatus()) return; // Trial gate check
+  if(!isSignedIn()){ showSignInGate(); return; }
+  if(_appStarted) return;
+  _appStarted = true;
   // ── Onboarding state (used during setup flow) ──
   var onboardState = { skill: null, gender: null, injury: null };
   // Safety: if metal theme is saved, keep it but ensure we can see the screen
@@ -8694,6 +8609,7 @@ function init(){
 
   // Show trial gate first if needed, else onboarding/check-in
   setTimeout(function(){
+    if(document.querySelector('#ai-modal.open, .onboard-modal.open, #apex-confirm.open, #share-modal.open')) return;
     if(shouldShowTrialGate()){
       openTrialGate();
     } else if(shouldShowOnboarding()){
@@ -8706,7 +8622,7 @@ function init(){
   }, 1800);
 }
 init();
-checkTrialExpiration();
+refreshAccessInBackground();
 
 
 // ── JOURNAL SYSTEM ────────────────────────────────────────────────────────────
@@ -9096,7 +9012,7 @@ function setResStretchFilter(f){ resStretchFilter = f; renderResources(); }
 // ── CUSTOM CONFIRM (PWA-safe replacement for confirm()) ──────────────────────
 var _confirmResolve = null;
 function apexConfirm(title, msg, btnLabel, isDanger){
-  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('apex-confirm-title').textContent = title;
   document.getElementById('confirm-msg').textContent = msg;
   var yesBtn = document.getElementById('confirm-yes-btn');
   yesBtn.textContent = btnLabel || 'Confirm';
@@ -9211,6 +9127,7 @@ function toggleAcc(id){
         <button class="onboard-btn" onclick="modifyPlanForInjury()">Adapt Plan &rarr;</button>
       </div>
     </div>
+    <div id="checkin-result"></div>
     <div id="checkin-normal-btns">
       <button class="onboard-btn skip" onclick="dismissCheckin()">Skip for today</button>
     </div>
@@ -9220,7 +9137,7 @@ function toggleAcc(id){
 
 <div class="apex-confirm" id="apex-confirm">
   <div class="apex-confirm-box">
-    <div class="apex-confirm-title" id="confirm-title">Confirm</div>
+    <div class="apex-confirm-title" id="apex-confirm-title">Confirm</div>
     <div class="apex-confirm-msg" id="confirm-msg">Are you sure?</div>
     <div class="apex-confirm-btns">
       <button class="apex-confirm-btn cancel" onclick="resolveConfirm(false)">Cancel</button>
